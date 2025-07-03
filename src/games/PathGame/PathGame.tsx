@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { generatePathQuestion, generateSVGPath, Path } from '../../utils/pathUtils';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
 import QuickFeedback from '../../components/QuickFeedback';
+import QuitGameDialog from '../../components/QuitGameDialog';
 
 const PathGame: React.FC = () => {
   const { dispatch, getRank, playSound } = useGame();
@@ -16,6 +17,7 @@ const PathGame: React.FC = () => {
   const [selectedPath, setSelectedPath] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   const TOTAL_QUESTIONS = 6;
 
@@ -81,6 +83,11 @@ const PathGame: React.FC = () => {
     window.history.back();
   };
 
+  const handleQuitConfirm = () => {
+    setShowQuitDialog(false);
+    goHome();
+  };
+
   const getPathColor = (path: Path) => {
     if (selectedPath === null) return '#6B7280'; // Default gray
     if (selectedPath === path.id) {
@@ -97,13 +104,23 @@ const PathGame: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-white"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            🛤️ Path Game
-          </motion.h1>
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={() => setShowQuitDialog(true)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </motion.button>
+            <motion.h1 
+              className="text-3xl md:text-4xl font-bold text-white"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              🛤️ Path Game
+            </motion.h1>
+          </div>
           <div className="text-white text-lg font-semibold">
             Question {questionNumber}/{TOTAL_QUESTIONS}
           </div>
@@ -238,6 +255,13 @@ const PathGame: React.FC = () => {
             onHome={goHome}
           />
         )}
+
+        {/* Quit Game Dialog */}
+        <QuitGameDialog
+          isOpen={showQuitDialog}
+          onClose={() => setShowQuitDialog(false)}
+          onConfirm={handleQuitConfirm}
+        />
       </div>
     </div>
   );

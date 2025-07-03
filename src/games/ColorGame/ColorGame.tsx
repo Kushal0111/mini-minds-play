@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { generateColorQuestion } from '../../utils/colorUtils';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
+import QuitGameDialog from '../../components/QuitGameDialog';
 
 interface ColorQuestion {
   text: string;
@@ -20,6 +21,7 @@ const ColorGame: React.FC = () => {
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [showResult, setShowResult] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   const TOTAL_QUESTIONS = 8;
 
@@ -80,6 +82,11 @@ const ColorGame: React.FC = () => {
     window.history.back();
   };
 
+  const handleQuitConfirm = () => {
+    setShowQuitDialog(false);
+    goHome();
+  };
+
   if (!currentQuestion) return null;
 
   return (
@@ -87,13 +94,23 @@ const ColorGame: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-white"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            🎨 Color Game
-          </motion.h1>
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={() => setShowQuitDialog(true)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </motion.button>
+            <motion.h1 
+              className="text-3xl md:text-4xl font-bold text-white"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              🎨 Color Game
+            </motion.h1>
+          </div>
           <div className="text-white text-lg font-semibold">
             Question {questionNumber}/{TOTAL_QUESTIONS}
           </div>
@@ -167,6 +184,13 @@ const ColorGame: React.FC = () => {
         <div className="text-center text-white text-lg font-semibold">
           Score: {score.correct}/{score.total}
         </div>
+
+        {/* Quit Game Dialog */}
+        <QuitGameDialog
+          isOpen={showQuitDialog}
+          onClose={() => setShowQuitDialog(false)}
+          onConfirm={handleQuitConfirm}
+        />
 
         {/* Result Dialog */}
         {showResult && (

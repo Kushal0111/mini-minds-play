@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
 import QuickFeedback from '../../components/QuickFeedback';
+import QuitGameDialog from '../../components/QuitGameDialog';
 
 interface AttentionQuestion {
   originalSurface: number;
@@ -24,6 +25,7 @@ const AttentionGame: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [gamePhase, setGamePhase] = useState<'ready' | 'flipping' | 'answer'>('ready');
+  const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   const TOTAL_QUESTIONS = 5;
   const SURFACES = 6; // Number of surfaces to choose from
@@ -129,6 +131,11 @@ const AttentionGame: React.FC = () => {
     window.history.back();
   };
 
+  const handleQuitConfirm = () => {
+    setShowQuitDialog(false);
+    goHome();
+  };
+
   const getCurrentShape = () => {
     if (!currentQuestion) return shapes[0];
     
@@ -160,13 +167,23 @@ const AttentionGame: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-white"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            🧠 Attention Game
-          </motion.h1>
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={() => setShowQuitDialog(true)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </motion.button>
+            <motion.h1 
+              className="text-3xl md:text-4xl font-bold text-white"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              🧠 Attention Game
+            </motion.h1>
+          </div>
           <div className="text-white text-lg font-semibold">
             Question {questionNumber}/{TOTAL_QUESTIONS}
           </div>
@@ -303,6 +320,13 @@ const AttentionGame: React.FC = () => {
             onHome={goHome}
           />
         )}
+
+        {/* Quit Game Dialog */}
+        <QuitGameDialog
+          isOpen={showQuitDialog}
+          onClose={() => setShowQuitDialog(false)}
+          onConfirm={handleQuitConfirm}
+        />
       </div>
     </div>
   );

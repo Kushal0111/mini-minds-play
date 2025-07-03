@@ -1,12 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { CalendarQuestion } from '../../types/game.types';
 import { generateRandomDate, formatDate, getDayOfWeek, addDays, generateWrongOptions } from '../../utils/dateUtils';
 import Timer from '../../components/Timer';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
+import QuitGameDialog from '../../components/QuitGameDialog';
 
 const CalendarGame: React.FC = () => {
   const { dispatch, getRank, playSound } = useGame();
@@ -17,6 +18,7 @@ const CalendarGame: React.FC = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(true);
+  const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   const TOTAL_QUESTIONS = 5;
   const TIMER_SECONDS = 7;
@@ -107,6 +109,11 @@ const CalendarGame: React.FC = () => {
     window.history.back();
   };
 
+  const handleQuitConfirm = () => {
+    setShowQuitDialog(false);
+    goHome();
+  };
+
   if (!currentQuestion) return null;
 
   return (
@@ -114,13 +121,23 @@ const CalendarGame: React.FC = () => {
       <div className="max-w-4xl mx-auto flex-1 flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <motion.h1 
-            className="text-2xl md:text-3xl font-bold text-white"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            📅 Calendar Game
-          </motion.h1>
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={() => setShowQuitDialog(true)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </motion.button>
+            <motion.h1 
+              className="text-2xl md:text-3xl font-bold text-white"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              📅 Calendar Game
+            </motion.h1>
+          </div>
           <div className="text-white text-lg font-semibold">
             {questionNumber}/{TOTAL_QUESTIONS}
           </div>
@@ -202,6 +219,13 @@ const CalendarGame: React.FC = () => {
             exit={{ opacity: 0 }}
           />
         )}
+
+        {/* Quit Game Dialog */}
+        <QuitGameDialog
+          isOpen={showQuitDialog}
+          onClose={() => setShowQuitDialog(false)}
+          onConfirm={handleQuitConfirm}
+        />
 
         {/* Result Dialog */}
         {showResult && (
