@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -18,21 +19,26 @@ const PathGame: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
+  const [gameActive, setGameActive] = useState(true);
 
   const TOTAL_QUESTIONS = 6;
 
   useEffect(() => {
-    generateQuestion();
-  }, []);
+    if (gameActive) {
+      generateQuestion();
+    }
+  }, [gameActive]);
 
   const generateQuestion = () => {
+    if (!gameActive) return;
+    
     const paths = generatePathQuestion();
     setCurrentPaths(paths);
     setSelectedPath(null);
   };
 
   const handlePathSelect = (pathId: number) => {
-    if (selectedPath !== null) return;
+    if (selectedPath !== null || !gameActive) return;
     
     setSelectedPath(pathId);
     const selectedPathData = currentPaths.find(p => p.id === pathId);
@@ -50,6 +56,7 @@ const PathGame: React.FC = () => {
     playSound(correct ? 'correct' : 'wrong');
     
     setTimeout(() => {
+      if (!gameActive) return;
       setShowFeedback(false);
       if (questionNumber >= TOTAL_QUESTIONS) {
         const accuracy = (newScore.correct / newScore.total) * 100;
@@ -73,6 +80,7 @@ const PathGame: React.FC = () => {
   };
 
   const playAgain = () => {
+    setGameActive(true);
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
@@ -84,6 +92,7 @@ const PathGame: React.FC = () => {
   };
 
   const handleQuitConfirm = () => {
+    setGameActive(false);
     setShowQuitDialog(false);
     goHome();
   };
@@ -219,9 +228,9 @@ const PathGame: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 onClick={() => handlePathSelect(path.id)}
-                disabled={selectedPath !== null}
-                whileHover={{ scale: selectedPath === null ? 1.05 : 1 }}
-                whileTap={{ scale: selectedPath === null ? 0.95 : 1 }}
+                disabled={selectedPath !== null || !gameActive}
+                whileHover={{ scale: selectedPath === null && gameActive ? 1.05 : 1 }}
+                whileTap={{ scale: selectedPath === null && gameActive ? 0.95 : 1 }}
               >
                 Path {path.id + 1}
               </motion.button>

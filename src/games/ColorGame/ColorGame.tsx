@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -22,21 +23,26 @@ const ColorGame: React.FC = () => {
   const [showResult, setShowResult] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
+  const [gameActive, setGameActive] = useState(true);
 
   const TOTAL_QUESTIONS = 8;
 
   useEffect(() => {
-    generateQuestion();
-  }, []);
+    if (gameActive) {
+      generateQuestion();
+    }
+  }, [gameActive]);
 
   const generateQuestion = () => {
+    if (!gameActive) return;
+    
     const question = generateColorQuestion();
     setCurrentQuestion(question);
     setSelectedAnswer(null);
   };
 
   const handleAnswer = (colorIndex: number) => {
-    if (selectedAnswer !== null || !currentQuestion) return;
+    if (selectedAnswer !== null || !currentQuestion || !gameActive) return;
     
     setSelectedAnswer(colorIndex);
     const isCorrect = colorIndex === currentQuestion.correctColorIndex;
@@ -50,6 +56,7 @@ const ColorGame: React.FC = () => {
     playSound(isCorrect ? 'correct' : 'wrong');
     
     setTimeout(() => {
+      if (!gameActive) return;
       if (questionNumber >= TOTAL_QUESTIONS) {
         const accuracy = (newScore.correct / newScore.total) * 100;
         const rank = getRank(accuracy);
@@ -72,6 +79,7 @@ const ColorGame: React.FC = () => {
   };
 
   const playAgain = () => {
+    setGameActive(true);
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
@@ -83,6 +91,7 @@ const ColorGame: React.FC = () => {
   };
 
   const handleQuitConfirm = () => {
+    setGameActive(false);
     setShowQuitDialog(false);
     goHome();
   };
@@ -165,7 +174,7 @@ const ColorGame: React.FC = () => {
               }`}
               style={{ backgroundColor: color.hex }}
               onClick={() => handleAnswer(index)}
-              disabled={selectedAnswer !== null}
+              disabled={selectedAnswer !== null || !gameActive}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}

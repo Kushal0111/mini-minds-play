@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -26,16 +27,21 @@ const AttentionGame: React.FC = () => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [gamePhase, setGamePhase] = useState<'ready' | 'flipping' | 'answer'>('ready');
   const [showQuitDialog, setShowQuitDialog] = useState(false);
+  const [gameActive, setGameActive] = useState(true);
 
   const TOTAL_QUESTIONS = 5;
   const SURFACES = 6; // Number of surfaces to choose from
   const shapes = ['🔺', '🟦', '⭐', '🔴', '💚', '🟣'];
 
   useEffect(() => {
-    generateQuestion();
-  }, []);
+    if (gameActive) {
+      generateQuestion();
+    }
+  }, [gameActive]);
 
   const generateQuestion = () => {
+    if (!gameActive) return;
+    
     const originalSurface = Math.floor(Math.random() * SURFACES);
     const numFlips = Math.floor(Math.random() * 3) + 4; // 4-6 flips
     const flips: Array<{ from: number; to: number }> = [];
@@ -60,7 +66,7 @@ const AttentionGame: React.FC = () => {
   };
 
   const startFlipping = () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || !gameActive) return;
     
     setGamePhase('flipping');
     setIsFlipping(true);
@@ -69,19 +75,22 @@ const AttentionGame: React.FC = () => {
     // Execute flips with delays
     const executeFlips = async () => {
       for (let i = 0; i < currentQuestion.flips.length; i++) {
+        if (!gameActive) return;
         setCurrentFlipIndex(i);
         await new Promise(resolve => setTimeout(resolve, 800));
       }
       
-      setIsFlipping(false);
-      setGamePhase('answer');
+      if (gameActive) {
+        setIsFlipping(false);
+        setGamePhase('answer');
+      }
     };
     
     executeFlips();
   };
 
   const handleAnswer = (surface: number) => {
-    if (selectedAnswer !== null || !currentQuestion) return;
+    if (selectedAnswer !== null || !currentQuestion || !gameActive) return;
     
     setSelectedAnswer(surface);
     const correct = surface === currentQuestion.originalSurface;
@@ -98,6 +107,7 @@ const AttentionGame: React.FC = () => {
     playSound(correct ? 'correct' : 'wrong');
     
     setTimeout(() => {
+      if (!gameActive) return;
       setShowFeedback(false);
       if (questionNumber >= TOTAL_QUESTIONS) {
         const accuracy = (newScore.correct / newScore.total) * 100;
@@ -121,6 +131,7 @@ const AttentionGame: React.FC = () => {
   };
 
   const playAgain = () => {
+    setGameActive(true);
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
@@ -132,6 +143,7 @@ const AttentionGame: React.FC = () => {
   };
 
   const handleQuitConfirm = () => {
+    setGameActive(false);
     setShowQuitDialog(false);
     goHome();
   };
@@ -227,7 +239,7 @@ const AttentionGame: React.FC = () => {
                 </p>
               </div>
               
-              <GameButton onClick={startFlipping} variant="primary">
+              <GameButton onClick={startFlipping} variant="primary" disabled={!gameActive}>
                 Start Flipping! 🚀
               </GameButton>
             </div>
@@ -278,12 +290,12 @@ const AttentionGame: React.FC = () => {
                           : 'bg-gray-100 hover:bg-gray-200 transform hover:scale-105'
                       }`}
                       onClick={() => handleAnswer(index)}
-                      disabled={selectedAnswer !== null}
+                      disabled={selectedAnswer !== null || !gameActive}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 }}
-                      whileHover={{ scale: selectedAnswer === null ? 1.1 : 1 }}
-                      whileTap={{ scale: selectedAnswer === null ? 0.9 : 1 }}
+                      whileHover={{ scale: selectedAnswer === null && gameActive ? 1.1 : 1 }}
+                      whileTap={{ scale: selectedAnswer === null && gameActive ? 0.9 : 1 }}
                     >
                       {shapes[index]}
                     </motion.button>

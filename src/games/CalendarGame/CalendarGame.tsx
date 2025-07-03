@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -19,15 +20,20 @@ const CalendarGame: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(true);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
+  const [gameActive, setGameActive] = useState(true);
 
   const TOTAL_QUESTIONS = 5;
   const TIMER_SECONDS = 7;
 
   useEffect(() => {
-    generateQuestion();
-  }, []);
+    if (gameActive) {
+      generateQuestion();
+    }
+  }, [gameActive]);
 
   const generateQuestion = () => {
+    if (!gameActive) return;
+    
     const baseDate = generateRandomDate();
     const daysToAdd = Math.floor(Math.random() * 15) + 1;
     const targetDate = addDays(baseDate, daysToAdd);
@@ -55,7 +61,7 @@ const CalendarGame: React.FC = () => {
   };
 
   const handleAnswer = (answerIndex: number) => {
-    if (selectedAnswer !== null) return;
+    if (selectedAnswer !== null || !gameActive) return;
     
     setSelectedAnswer(answerIndex);
     setIsTimerActive(false);
@@ -71,6 +77,7 @@ const CalendarGame: React.FC = () => {
     setShowFeedback(true);
     
     setTimeout(() => {
+      if (!gameActive) return;
       setShowFeedback(false);
       if (questionNumber >= TOTAL_QUESTIONS) {
         const accuracy = (newScore.correct / newScore.total) * 100;
@@ -94,11 +101,12 @@ const CalendarGame: React.FC = () => {
   };
 
   const handleTimeout = () => {
-    if (selectedAnswer !== null) return;
+    if (selectedAnswer !== null || !gameActive) return;
     handleAnswer(-1); // Wrong answer for timeout
   };
 
   const playAgain = () => {
+    setGameActive(true);
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
@@ -110,6 +118,8 @@ const CalendarGame: React.FC = () => {
   };
 
   const handleQuitConfirm = () => {
+    setGameActive(false);
+    setIsTimerActive(false);
     setShowQuitDialog(false);
     goHome();
   };
@@ -148,7 +158,7 @@ const CalendarGame: React.FC = () => {
           <Timer 
             seconds={TIMER_SECONDS} 
             onComplete={handleTimeout}
-            isActive={isTimerActive}
+            isActive={isTimerActive && gameActive}
           />
         </div>
 
@@ -174,7 +184,7 @@ const CalendarGame: React.FC = () => {
           {currentQuestion.options.map((option, index) => (
             <motion.button
               key={index}
-              className={`p-4 rounded-2xl text-center transition-all duration-200 ${
+              className={`p-3 rounded-2xl text-center transition-all duration-200 ${
                 selectedAnswer === null
                   ? 'bg-white hover:bg-gray-50 hover:shadow-lg transform hover:scale-105'
                   : selectedAnswer === index
@@ -186,15 +196,15 @@ const CalendarGame: React.FC = () => {
                   : 'bg-gray-100'
               }`}
               onClick={() => handleAnswer(index)}
-              disabled={selectedAnswer !== null}
+              disabled={selectedAnswer !== null || !gameActive}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <div className="text-lg font-bold text-gray-800">
+              <div className="text-sm md:text-base font-bold text-gray-800">
                 {option.date}
               </div>
-              <div className="text-md text-gray-600">
+              <div className="text-xs md:text-sm text-gray-600">
                 {option.day}
               </div>
             </motion.button>
