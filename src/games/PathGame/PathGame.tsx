@@ -146,7 +146,7 @@ const PathGame: React.FC = () => {
               {/* Paths */}
               {currentPaths.map((path, index) => (
                 <motion.g key={path.id}>
-                  <path
+                  <motion.path
                     d={generateSVGPath(path.points)}
                     fill="none"
                     stroke={getPathColor(path)}
