@@ -110,24 +110,24 @@ const CalendarGame: React.FC = () => {
   if (!currentQuestion) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 p-4 flex flex-col">
+      <div className="max-w-4xl mx-auto flex-1 flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-white"
+            className="text-2xl md:text-3xl font-bold text-white"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             📅 Calendar Game
           </motion.h1>
           <div className="text-white text-lg font-semibold">
-            Question {questionNumber}/{TOTAL_QUESTIONS}
+            {questionNumber}/{TOTAL_QUESTIONS}
           </div>
         </div>
 
         {/* Timer */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6">
           <Timer 
             seconds={TIMER_SECONDS} 
             onComplete={handleTimeout}
@@ -137,30 +137,27 @@ const CalendarGame: React.FC = () => {
 
         {/* Question */}
         <motion.div 
-          className="bg-white rounded-3xl p-8 mb-8 text-center shadow-xl"
+          className="bg-white rounded-3xl p-6 mb-6 text-center shadow-xl"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           key={questionNumber}
         >
-          <div className="mb-6">
-            <div className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-              {currentQuestion.date}
-            </div>
-            <div className="text-xl text-gray-600 mb-4">
-              ({currentQuestion.day})
+          <div className="mb-4">
+            <div className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
+              {currentQuestion.date} ({currentQuestion.day})
             </div>
             <div className="text-lg text-purple-600 font-semibold">
-              What will be the day after {currentQuestion.daysToAdd} days?
+              After {currentQuestion.daysToAdd} days?
             </div>
           </div>
         </motion.div>
 
         {/* Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-6 flex-1">
           {currentQuestion.options.map((option, index) => (
             <motion.button
               key={index}
-              className={`p-6 rounded-2xl text-left transition-all duration-200 ${
+              className={`p-4 rounded-2xl text-center transition-all duration-200 ${
                 selectedAnswer === null
                   ? 'bg-white hover:bg-gray-50 hover:shadow-lg transform hover:scale-105'
                   : selectedAnswer === index
@@ -177,10 +174,10 @@ const CalendarGame: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <div className="text-xl font-bold text-gray-800">
+              <div className="text-lg font-bold text-gray-800">
                 {option.date}
               </div>
-              <div className="text-lg text-gray-600">
+              <div className="text-md text-gray-600">
                 {option.day}
               </div>
             </motion.button>
