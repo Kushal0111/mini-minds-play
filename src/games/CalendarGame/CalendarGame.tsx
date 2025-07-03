@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
@@ -9,6 +9,7 @@ import Timer from '../../components/Timer';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
 import QuitGameDialog from '../../components/QuitGameDialog';
+import AppMenu from '../../components/AppMenu';
 
 const CalendarGame: React.FC = () => {
   const { dispatch, getRank, playSound } = useGame();
@@ -21,6 +22,7 @@ const CalendarGame: React.FC = () => {
   const [isTimerActive, setIsTimerActive] = useState(true);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
   const [gameActive, setGameActive] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const TOTAL_QUESTIONS = 5;
   const TIMER_SECONDS = 7;
@@ -28,6 +30,22 @@ const CalendarGame: React.FC = () => {
   useEffect(() => {
     if (gameActive) {
       generateQuestion();
+    }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [gameActive]);
+
+  // Cleanup timeouts when game becomes inactive
+  useEffect(() => {
+    if (!gameActive) {
+      setIsTimerActive(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
   }, [gameActive]);
 
@@ -76,7 +94,12 @@ const CalendarGame: React.FC = () => {
     playSound(isCorrect ? 'correct' : 'wrong');
     setShowFeedback(true);
     
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
       if (!gameActive) return;
       setShowFeedback(false);
       if (questionNumber >= TOTAL_QUESTIONS) {
@@ -114,12 +137,16 @@ const CalendarGame: React.FC = () => {
   };
 
   const goHome = () => {
+    setGameActive(false);
     window.history.back();
   };
 
   const handleQuitConfirm = () => {
     setGameActive(false);
     setIsTimerActive(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     setShowQuitDialog(false);
     goHome();
   };
@@ -148,8 +175,11 @@ const CalendarGame: React.FC = () => {
               📅 Calendar Game
             </motion.h1>
           </div>
-          <div className="text-white text-lg font-semibold">
-            {questionNumber}/{TOTAL_QUESTIONS}
+          <div className="flex items-center gap-3">
+            <div className="text-white text-lg font-semibold">
+              {questionNumber}/{TOTAL_QUESTIONS}
+            </div>
+            <AppMenu />
           </div>
         </div>
 
@@ -164,27 +194,30 @@ const CalendarGame: React.FC = () => {
 
         {/* Question */}
         <motion.div 
-          className="bg-white rounded-3xl p-6 mb-6 text-center shadow-xl"
+          className="bg-white rounded-3xl p-4 mb-4 text-center shadow-xl"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           key={questionNumber}
         >
-          <div className="mb-4">
-            <div className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
-              {currentQuestion.date} ({currentQuestion.day})
+          <div className="mb-2">
+            <div className="text-lg md:text-xl font-bold text-gray-800 mb-1">
+              {currentQuestion.date}
             </div>
-            <div className="text-lg text-purple-600 font-semibold">
+            <div className="text-sm md:text-base text-gray-600 mb-2">
+              {currentQuestion.day}
+            </div>
+            <div className="text-base md:text-lg text-purple-600 font-semibold">
               After {currentQuestion.daysToAdd} days?
             </div>
           </div>
         </motion.div>
 
         {/* Options */}
-        <div className="grid grid-cols-2 gap-3 mb-6 flex-1">
+        <div className="grid grid-cols-2 gap-2 mb-4 flex-1">
           {currentQuestion.options.map((option, index) => (
             <motion.button
               key={index}
-              className={`p-3 rounded-2xl text-center transition-all duration-200 ${
+              className={`p-2 rounded-xl text-center transition-all duration-200 ${
                 selectedAnswer === null
                   ? 'bg-white hover:bg-gray-50 hover:shadow-lg transform hover:scale-105'
                   : selectedAnswer === index

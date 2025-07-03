@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
@@ -7,6 +7,7 @@ import { generateColorQuestion } from '../../utils/colorUtils';
 import GameButton from '../../components/GameButton';
 import ResultDialog from '../../components/ResultDialog';
 import QuitGameDialog from '../../components/QuitGameDialog';
+import AppMenu from '../../components/AppMenu';
 
 interface ColorQuestion {
   text: string;
@@ -24,12 +25,26 @@ const ColorGame: React.FC = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
   const [gameActive, setGameActive] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const TOTAL_QUESTIONS = 8;
 
   useEffect(() => {
     if (gameActive) {
       generateQuestion();
+    }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [gameActive]);
+
+  // Cleanup timeouts when game becomes inactive
+  useEffect(() => {
+    if (!gameActive && timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   }, [gameActive]);
 
@@ -55,7 +70,12 @@ const ColorGame: React.FC = () => {
     
     playSound(isCorrect ? 'correct' : 'wrong');
     
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
       if (!gameActive) return;
       if (questionNumber >= TOTAL_QUESTIONS) {
         const accuracy = (newScore.correct / newScore.total) * 100;
@@ -87,11 +107,15 @@ const ColorGame: React.FC = () => {
   };
 
   const goHome = () => {
+    setGameActive(false);
     window.history.back();
   };
 
   const handleQuitConfirm = () => {
     setGameActive(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     setShowQuitDialog(false);
     goHome();
   };
@@ -120,8 +144,11 @@ const ColorGame: React.FC = () => {
               🎨 Color Game
             </motion.h1>
           </div>
-          <div className="text-white text-lg font-semibold">
-            Question {questionNumber}/{TOTAL_QUESTIONS}
+          <div className="flex items-center gap-3">
+            <div className="text-white text-lg font-semibold">
+              Question {questionNumber}/{TOTAL_QUESTIONS}
+            </div>
+            <AppMenu />
           </div>
         </div>
 
