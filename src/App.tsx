@@ -13,6 +13,7 @@ import ColorGame from "./games/ColorGame/ColorGame";
 import PathGame from "./games/PathGame/PathGame";
 import AttentionGame from "./games/AttentionGame/AttentionGame";
 import MemoryGame from "./games/MemoryGame/MemoryGame";
+import HeadCountGame from "./games/HeadCountGame/HeadCountGame";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/path" element={<PathGame />} />
             <Route path="/attention" element={<AttentionGame />} />
             <Route path="/memory" element={<MemoryGame />} />
+            <Route path="/headcount" element={<HeadCountGame />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

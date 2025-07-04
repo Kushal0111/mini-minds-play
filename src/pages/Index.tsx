@@ -1,7 +1,7 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Calendar, Palette, Route, Eye, Brain, Play } from "lucide-react";
+import { Calendar, Palette, Route, Eye, Brain, Play, Calculator } from "lucide-react";
 import { Link } from "react-router-dom";
 import AppMenu from "../components/AppMenu";
 
@@ -44,6 +44,14 @@ const gameCards = [
     color: "from-emerald-400 to-teal-500",
     emoji: "🧩",
     path: "/memory",
+    difficulty: "Medium"
+  },
+  {
+    title: "Head Count",
+    icon: Calculator,
+    color: "from-indigo-400 to-purple-500",
+    emoji: "🧮",
+    path: "/headcount",
     difficulty: "Medium"
   }
 ];

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import ColorGame from '../games/ColorGame/ColorGame';
 import PathGame from '../games/PathGame/PathGame';
 import AttentionGame from '../games/AttentionGame/AttentionGame';
 import MemoryGame from '../games/MemoryGame/MemoryGame';
+import HeadCountGame from '../games/HeadCountGame/HeadCountGame';
 
 const games = [
   { id: 'calendar', name: 'Calendar', component: CalendarGame },
@@ -17,6 +17,7 @@ const games = [
   { id: 'path', name: 'Path', component: PathGame },
   { id: 'attention', name: 'Attention', component: AttentionGame },
   { id: 'memory', name: 'Memory', component: MemoryGame },
+  { id: 'headcount', name: 'Head Count', component: HeadCountGame },
 ];
 
 const GameSession = () => {
