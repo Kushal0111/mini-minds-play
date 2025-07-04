@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, User, BarChart3, X } from 'lucide-react';
+import { MoreVertical, User, BarChart3, Settings, X } from 'lucide-react';
 import ProfileDialog from './ProfileDialog';
 import ProgressDialog from './ProgressDialog';
+import SettingsDialog from './SettingsDialog';
 
 const AppMenu: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleProfileClick = () => {
     setIsMenuOpen(false);
@@ -18,6 +20,11 @@ const AppMenu: React.FC = () => {
   const handleProgressClick = () => {
     setIsMenuOpen(false);
     setShowProgress(true);
+  };
+
+  const handleSettingsClick = () => {
+    setIsMenuOpen(false);
+    setShowSettings(true);
   };
 
   return (
@@ -54,6 +61,13 @@ const AppMenu: React.FC = () => {
                 <BarChart3 className="h-4 w-4" />
                 Progress
               </button>
+              <button
+                onClick={handleSettingsClick}
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -67,6 +81,11 @@ const AppMenu: React.FC = () => {
       <ProgressDialog
         isOpen={showProgress}
         onClose={() => setShowProgress(false)}
+      />
+
+      <SettingsDialog
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </>
   );

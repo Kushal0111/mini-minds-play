@@ -49,10 +49,45 @@
 @layer base {
   * {
     @apply border-border;
+    /* Disable text selection to feel more native */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  html {
+    /* Disable zoom and make app feel native */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-fredoka;
+    /* Prevent overscroll bounce */
+    overscroll-behavior: none;
+    /* Disable pull-to-refresh */
+    overflow-x: hidden;
+  }
+
+  /* Re-enable text selection for input elements */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  @media screen and (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
   }
 }
 
@@ -72,4 +107,38 @@
   .wrong-flash {
     @apply bg-red-400 animate-pulse;
   }
+
+  /* Native app-like utilities */
+  .no-scroll {
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .native-container {
+    max-height: 100vh;
+    overflow: hidden;
+  }
+}
+
+/* Dark mode styles */
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 264 83% 70%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 264 83% 70%;
 }

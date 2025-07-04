@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "./context/GameContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import GameSession from "./pages/GameSession";
 import CalendarGame from "./games/CalendarGame/CalendarGame";
 import ColorGame from "./games/ColorGame/ColorGame";
 import PathGame from "./games/PathGame/PathGame";
@@ -24,6 +25,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/session" element={<GameSession />} />
             <Route path="/calendar" element={<CalendarGame />} />
             <Route path="/color" element={<ColorGame />} />
             <Route path="/path" element={<PathGame />} />
