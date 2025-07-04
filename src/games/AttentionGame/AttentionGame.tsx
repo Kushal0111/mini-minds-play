@@ -1,119 +1,95 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Eye, X } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
-import GameButton from '../../components/GameButton';
-import ResultDialog from '../../components/ResultDialog';
+import Timer from '../../components/Timer';
 import QuickFeedback from '../../components/QuickFeedback';
 import QuitGameDialog from '../../components/QuitGameDialog';
+import ResultDialog from '../../components/ResultDialog';
 
-interface AttentionQuestion {
-  shape: string;
-  blinkSequence: number[];
-  options: number[];
+interface AttentionGameProps {
+  onGameComplete?: () => void;
+  difficulty?: string;
 }
 
-const AttentionGame: React.FC = () => {
-  const { dispatch, getRank, playSound } = useGame();
-  const [currentQuestion, setCurrentQuestion] = useState<AttentionQuestion | null>(null);
-  const [questionNumber, setQuestionNumber] = useState(1);
+const AttentionGame: React.FC<AttentionGameProps> = ({ onGameComplete, difficulty = 'medium' }) => {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [showResult, setShowResult] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<number[]>([]);
+  const [gamePhase, setGamePhase] = useState<'watching' | 'answering' | 'result'>('watching');
+  const [blinkingShape, setBlinkingShape] = useState<number | null>(null);
+  const [blinkSequence, setBlinkSequence] = useState<number[]>([]);
+  const [playerSequence, setPlayerSequence] = useState<number[]>([]);
+  const [currentBlink, setCurrentBlink] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [gamePhase, setGamePhase] = useState<'ready' | 'playing' | 'answer'>('ready');
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [gameEnded, setGameEnded] = useState(false);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
-  const [gameActive, setGameActive] = useState(true);
-  const [currentBlink, setCurrentBlink] = useState(-1);
-  const [blinkIndex, setBlinkIndex] = useState(0);
 
-  const TOTAL_QUESTIONS = 5;
-  const GRID_SIZE = 9; // 3x3 grid
-  const shapes = ['⭐', '🔴', '🟦', '🟢', '🟡', '🟣', '🔺', '🔶', '💎'];
+  const { playSound, dispatch } = useGame();
+
+  const shapes = [
+    { id: 0, shape: '🔴', name: 'Circle' },
+    { id: 1, shape: '🔵', name: 'Blue Circle' },
+    { id: 2, shape: '🟢', name: 'Green Circle' },
+    { id: 3, shape: '🟡', name: 'Yellow Circle' },
+    { id: 4, shape: '🟣', name: 'Purple Circle' },
+    { id: 5, shape: '🟠', name: 'Orange Circle' },
+  ];
 
   useEffect(() => {
-    if (gameActive) {
-      generateQuestion();
-    }
-  }, [gameActive]);
+    dispatch({ type: 'START_GAME', payload: 'attention' });
+    startNewRound();
+  }, [dispatch]);
 
-  const generateQuestion = () => {
-    if (!gameActive) return;
-    
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
-    const blinkCount = Math.floor(Math.random() * 2) + 4; // 4-5 blinks
-    const blinkSequence: number[] = [];
-    
-    // Generate random blink sequence
-    for (let i = 0; i < blinkCount; i++) {
-      blinkSequence.push(Math.floor(Math.random() * GRID_SIZE));
+  const generateBlinkSequence = () => {
+    const sequenceLength = Math.min(4 + Math.floor(currentQuestion / 2), 6);
+    const sequence = [];
+    for (let i = 0; i < sequenceLength; i++) {
+      sequence.push(Math.floor(Math.random() * 6));
     }
-    
-    // Generate options (all grid positions)
-    const options = Array.from({ length: GRID_SIZE }, (_, i) => i);
-
-    setCurrentQuestion({
-      shape,
-      blinkSequence,
-      options
-    });
-    
-    setSelectedAnswer([]);
-    setGamePhase('ready');
-    setCurrentBlink(-1);
-    setBlinkIndex(0);
+    return sequence;
   };
 
-  const startBlinking = () => {
-    if (!currentQuestion || !gameActive) return;
+  const startNewRound = () => {
+    const sequence = generateBlinkSequence();
+    setBlinkSequence(sequence);
+    setPlayerSequence([]);
+    setCurrentBlink(0);
+    setGamePhase('watching');
+    setBlinkingShape(null);
+    setTimeLeft(30);
     
-    setGamePhase('playing');
-    setBlinkIndex(0);
-    
-    const playBlinks = () => {
-      if (!currentQuestion || !gameActive) return;
-      
-      const sequence = currentQuestion.blinkSequence;
-      let index = 0;
-      
-      const blinkInterval = setInterval(() => {
-        if (!gameActive || index >= sequence.length) {
-          clearInterval(blinkInterval);
-          setCurrentBlink(-1);
-          setTimeout(() => {
-            if (gameActive) {
-              setGamePhase('answer');
-            }
-          }, 500);
-          return;
-        }
-        
-        setCurrentBlink(sequence[index]);
-        setBlinkIndex(index + 1);
-        
-        setTimeout(() => {
-          setCurrentBlink(-1);
-        }, 400);
-        
+    setTimeout(() => {
+      showBlinkSequence(sequence);
+    }, 1000);
+  };
+
+  const showBlinkSequence = (sequence: number[]) => {
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < sequence.length) {
+        setBlinkingShape(sequence[index]);
+        setTimeout(() => setBlinkingShape(null), 400);
         index++;
-      }, 800);
-    };
-
-    playBlinks();
+      } else {
+        clearInterval(interval);
+        setTimeout(() => {
+          setGamePhase('answering');
+        }, 500);
+      }
+    }, 800);
   };
 
-  const handlePositionSelect = (position: number) => {
-    if (gamePhase !== 'answer' || !currentQuestion || !gameActive) return;
+  const handleShapeClick = (shapeId: number) => {
+    if (gamePhase !== 'answering') return;
     
-    const newAnswer = [...selectedAnswer, position];
-    setSelectedAnswer(newAnswer);
+    const newPlayerSequence = [...playerSequence, shapeId];
+    setPlayerSequence(newPlayerSequence);
     
-    // Check if sequence is complete
-    if (newAnswer.length === currentQuestion.blinkSequence.length) {
-      const correct = JSON.stringify(newAnswer) === JSON.stringify(currentQuestion.blinkSequence);
-      
+    if (newPlayerSequence.length === blinkSequence.length) {
+      const correct = JSON.stringify(newPlayerSequence) === JSON.stringify(blinkSequence);
       setIsCorrect(correct);
       setShowFeedback(true);
       
@@ -126,14 +102,10 @@ const AttentionGame: React.FC = () => {
       playSound(correct ? 'correct' : 'wrong');
       
       setTimeout(() => {
-        if (!gameActive) return;
         setShowFeedback(false);
-        if (questionNumber >= TOTAL_QUESTIONS) {
-          const accuracy = (newScore.correct / newScore.total) * 100;
-          const rank = getRank(accuracy);
-          setShowResult(true);
-          playSound('complete');
-          
+        if (currentQuestion + 1 >= 10) {
+          setGameEnded(true);
+          const accuracy = Math.round((newScore.correct / newScore.total) * 100);
           dispatch({
             type: 'END_GAME',
             payload: {
@@ -142,199 +114,163 @@ const AttentionGame: React.FC = () => {
               completedAt: new Date()
             }
           });
+          if (onGameComplete) {
+            setTimeout(() => onGameComplete(), 2000);
+          }
         } else {
-          setQuestionNumber(prev => prev + 1);
-          generateQuestion();
+          setCurrentQuestion(currentQuestion + 1);
+          startNewRound();
         }
-      }, 1500);
+      }, 2000);
     }
   };
 
-  const playAgain = () => {
-    setGameActive(true);
-    setQuestionNumber(1);
-    setScore({ correct: 0, total: 0 });
-    setShowResult(false);
+  const handleTimeUp = () => {
+    if (gamePhase === 'answering' && playerSequence.length < blinkSequence.length) {
+      const newScore = {
+        correct: score.correct,
+        total: score.total + 1
+      };
+      setScore(newScore);
+      
+      if (currentQuestion + 1 >= 10) {
+        setGameEnded(true);
+        const accuracy = Math.round((newScore.correct / newScore.total) * 100);
+        dispatch({
+          type: 'END_GAME',
+          payload: {
+            gameType: 'attention',
+            score: { ...newScore, accuracy },
+            completedAt: new Date()
+          }
+        });
+        if (onGameComplete) {
+          setTimeout(() => onGameComplete(), 2000);
+        }
+      } else {
+        setCurrentQuestion(currentQuestion + 1);
+        startNewRound();
+      }
+    }
+  };
+
+  const handleQuit = () => {
     setShowQuitDialog(false);
-    generateQuestion();
+    if (onGameComplete) {
+      onGameComplete();
+    }
   };
-
-  const goHome = () => {
-    setGameActive(false);
-    window.history.back();
-  };
-
-  const handleQuitConfirm = () => {
-    setGameActive(false);
-    setShowQuitDialog(false);
-    goHome();
-  };
-
-  if (!currentQuestion) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <motion.button
-              onClick={() => setShowQuitDialog(true)}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft className="h-5 w-5 text-white" />
-            </motion.button>
-            <motion.h1 
-              className="text-3xl md:text-4xl font-bold text-white"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              🧠 Blink Sequence Game
-            </motion.h1>
-          </div>
-          <div className="text-white text-lg font-semibold">
-            Question {questionNumber}/{TOTAL_QUESTIONS}
-          </div>
+    <div className="h-screen bg-gradient-to-br from-purple-400 to-pink-500 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 text-white">
+        <div className="flex items-center gap-2">
+          <Eye className="w-6 h-6" />
+          <span className="font-bold text-lg">Attention Game</span>
         </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium">
+            {currentQuestion + 1}/10
+          </span>
+          {gamePhase === 'answering' && <Timer timeLeft={timeLeft} onTimeUp={handleTimeUp} />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowQuitDialog(true)}
+            className="text-white hover:bg-white/20"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
 
-        {/* Instructions */}
-        <motion.div 
-          className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 mb-6 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <p className="text-white text-lg font-medium">
-            {gamePhase === 'ready' && '👀 Watch the shape blink in sequence!'}
-            {gamePhase === 'playing' && '✨ Remember the blinking order...'}
-            {gamePhase === 'answer' && '🧠 Click the positions in the same order!'}
-          </p>
-        </motion.div>
-
-        {/* Game Area */}
-        <motion.div 
-          className="bg-white rounded-3xl p-8 mb-8 shadow-xl min-h-96"
+      {/* Game Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <motion.div
+          key={currentQuestion}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          key={questionNumber}
+          className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-xl"
         >
-          {gamePhase === 'ready' && (
-            <div className="text-center">
-              <div className="mb-8">
-                <div className="text-6xl mb-4">{currentQuestion.shape}</div>
-                <p className="text-lg text-gray-600 mb-6">
-                  This shape will blink {currentQuestion.blinkSequence.length} times in different positions.
-                  <br />
-                  Remember the sequence!
-                </p>
-              </div>
-              
-              <GameButton onClick={startBlinking} variant="primary" disabled={!gameActive}>
-                Start Blinking! ✨
-              </GameButton>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              ✨ Remember the Blinking Sequence!
+            </h2>
+            <p className="text-gray-600">
+              {gamePhase === 'watching' ? 'Watch carefully...' : 
+               gamePhase === 'answering' ? 'Click the shapes in the same order!' : 'Great job!'}
+            </p>
+            <div className="mt-2 text-sm text-gray-500">
+              Sequence length: {blinkSequence.length}
             </div>
-          )}
+          </div>
 
-          {(gamePhase === 'playing' || gamePhase === 'answer') && (
-            <div className="text-center">
-              {gamePhase === 'playing' && (
-                <div className="mb-4 text-lg text-gray-600">
-                  Blink {blinkIndex}/{currentQuestion.blinkSequence.length}
-                </div>
-              )}
-              
-              {gamePhase === 'answer' && (
-                <div className="mb-4 text-lg text-gray-600">
-                  Selected: {selectedAnswer.length}/{currentQuestion.blinkSequence.length}
-                </div>
-              )}
-              
-              {/* Grid */}
-              <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
-                {Array.from({ length: GRID_SIZE }, (_, index) => (
-                  <motion.button
-                    key={index}
-                    className={`h-20 w-20 rounded-xl transition-all duration-200 border-2 ${
-                      currentBlink === index
-                        ? 'bg-yellow-400 border-yellow-500 shadow-lg scale-110'
-                        : selectedAnswer.includes(index)
-                        ? 'bg-blue-200 border-blue-400'
-                        : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
-                    }`}
-                    onClick={() => handlePositionSelect(index)}
-                    disabled={gamePhase !== 'answer' || !gameActive}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ 
-                      opacity: 1, 
-                      scale: currentBlink === index ? 1.2 : 1,
-                    }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ 
-                      scale: gamePhase === 'answer' && gameActive ? 1.1 : 1 
-                    }}
-                    whileTap={{ 
-                      scale: gamePhase === 'answer' && gameActive ? 0.9 : 1 
-                    }}
-                  >
-                    <AnimatePresence>
-                      {currentBlink === index && (
-                        <motion.span 
-                          className="text-3xl"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          {currentQuestion.shape}
-                        </motion.span>
-                      )}
-                      {gamePhase === 'answer' && selectedAnswer.includes(index) && (
-                        <span className="text-sm font-bold text-blue-600">
-                          {selectedAnswer.indexOf(index) + 1}
-                        </span>
-                      )}
-                    </AnimatePresence>
-                  </motion.button>
+          {/* Shapes Grid */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {shapes.map((shape) => (
+              <motion.button
+                key={shape.id}
+                onClick={() => handleShapeClick(shape.id)}
+                disabled={gamePhase !== 'answering'}
+                className={`aspect-square rounded-2xl flex items-center justify-center text-4xl transition-all duration-200 ${
+                  gamePhase === 'answering' ? 'hover:scale-105 cursor-pointer' : 'cursor-default'
+                } ${
+                  blinkingShape === shape.id ? 'bg-yellow-300 scale-110 shadow-lg' : 'bg-gray-100'
+                }`}
+                animate={{
+                  scale: blinkingShape === shape.id ? 1.1 : 1,
+                  backgroundColor: blinkingShape === shape.id ? '#fde047' : '#f3f4f6'
+                }}
+                transition={{ duration: 0.2 }}
+              >
+                {shape.shape}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Player Progress */}
+          {gamePhase === 'answering' && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 text-center mb-2">
+                Your sequence ({playerSequence.length}/{blinkSequence.length}):
+              </p>
+              <div className="flex justify-center gap-2">
+                {playerSequence.map((shapeId, index) => (
+                  <span key={index} className="text-2xl">
+                    {shapes[shapeId].shape}
+                  </span>
+                ))}
+                {Array(blinkSequence.length - playerSequence.length).fill(0).map((_, index) => (
+                  <span key={`empty-${index}`} className="text-2xl text-gray-300">
+                    ⭕
+                  </span>
                 ))}
               </div>
             </div>
           )}
+
+          <div className="text-center">
+            <div className="flex justify-center gap-4 text-sm text-gray-600">
+              <span>Score: {score.correct}/{score.total}</span>
+              <span>Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
+            </div>
+          </div>
         </motion.div>
-
-        {/* Score */}
-        <div className="text-center text-white text-lg font-semibold">
-          Score: {score.correct}/{score.total} | Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
-        </div>
-
-        {/* Quick Feedback */}
-        <QuickFeedback 
-          isVisible={showFeedback}
-          isCorrect={isCorrect}
-          duration={100}
-        />
-
-        {/* Result Dialog */}
-        {showResult && (
-          <ResultDialog
-            isOpen={showResult}
-            stats={{
-              correct: score.correct,
-              total: score.total,
-              accuracy: (score.correct / score.total) * 100
-            }}
-            rank={getRank((score.correct / score.total) * 100)}
-            onPlayAgain={playAgain}
-            onHome={goHome}
-          />
-        )}
-
-        {/* Quit Game Dialog */}
-        <QuitGameDialog
-          isOpen={showQuitDialog}
-          onClose={() => setShowQuitDialog(false)}
-          onConfirm={handleQuitConfirm}
-        />
       </div>
+
+      <QuickFeedback show={showFeedback} isCorrect={isCorrect} />
+      <QuitGameDialog 
+        isOpen={showQuitDialog} 
+        onClose={() => setShowQuitDialog(false)}
+        onQuit={handleQuit}
+      />
+      <ResultDialog
+        isOpen={gameEnded}
+        gameType="Attention"
+        score={score}
+        onClose={() => onGameComplete && onGameComplete()}
+      />
     </div>
   );
 };

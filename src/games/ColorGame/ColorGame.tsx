@@ -1,88 +1,65 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { useGame } from '../../context/GameContext';
+import { Button } from '@/components/ui/button';
+import { Palette, X } from 'lucide-react';
 import { generateColorQuestion } from '../../utils/colorUtils';
-import GameButton from '../../components/GameButton';
-import ResultDialog from '../../components/ResultDialog';
+import { useGame } from '../../context/GameContext';
+import Timer from '../../components/Timer';
+import QuickFeedback from '../../components/QuickFeedback';
 import QuitGameDialog from '../../components/QuitGameDialog';
-import AppMenu from '../../components/AppMenu';
+import ResultDialog from '../../components/ResultDialog';
 
-interface ColorQuestion {
-  text: string;
-  textColor: string;
-  displayColors: Array<{ name: string; hex: string; rgb: string }>;
-  correctColorIndex: number;
+interface ColorGameProps {
+  onGameComplete?: () => void;
+  difficulty?: string;
 }
 
-const ColorGame: React.FC = () => {
-  const { dispatch, getRank, playSound } = useGame();
-  const [currentQuestion, setCurrentQuestion] = useState<ColorQuestion | null>(null);
-  const [questionNumber, setQuestionNumber] = useState(1);
+const ColorGame: React.FC<ColorGameProps> = ({ onGameComplete, difficulty = 'medium' }) => {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [showResult, setShowResult] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(25);
+  const [gameEnded, setGameEnded] = useState(false);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
-  const [gameActive, setGameActive] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
 
-  const TOTAL_QUESTIONS = 8;
+  const { playSound, dispatch } = useGame();
 
   useEffect(() => {
-    if (gameActive) {
-      generateQuestion();
-    }
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [gameActive]);
+    generateQuestions();
+    dispatch({ type: 'START_GAME', payload: 'color' });
+  }, [dispatch]);
 
-  // Cleanup timeouts when game becomes inactive
-  useEffect(() => {
-    if (!gameActive && timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+  const generateQuestions = () => {
+    const newQuestions = [];
+    for (let i = 0; i < 10; i++) {
+      newQuestions.push(generateColorQuestion());
     }
-  }, [gameActive]);
-
-  const generateQuestion = () => {
-    if (!gameActive) return;
-    
-    const question = generateColorQuestion();
-    setCurrentQuestion(question);
-    setSelectedAnswer(null);
+    setQuestions(newQuestions);
   };
 
   const handleAnswer = (colorIndex: number) => {
-    if (selectedAnswer !== null || !currentQuestion || !gameActive) return;
+    if (selectedAnswer !== null) return;
     
     setSelectedAnswer(colorIndex);
-    const isCorrect = colorIndex === currentQuestion.correctColorIndex;
+    const correct = colorIndex === questions[currentQuestion].correctColorIndex;
+    setIsCorrect(correct);
+    setShowFeedback(true);
     
     const newScore = {
-      correct: score.correct + (isCorrect ? 1 : 0),
+      correct: score.correct + (correct ? 1 : 0),
       total: score.total + 1
     };
     setScore(newScore);
     
-    playSound(isCorrect ? 'correct' : 'wrong');
+    playSound(correct ? 'correct' : 'wrong');
     
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      if (!gameActive) return;
-      if (questionNumber >= TOTAL_QUESTIONS) {
-        const accuracy = (newScore.correct / newScore.total) * 100;
-        const rank = getRank(accuracy);
-        setShowResult(true);
-        playSound('complete');
-        
+    setTimeout(() => {
+      if (currentQuestion + 1 >= questions.length) {
+        setGameEnded(true);
+        const accuracy = Math.round((newScore.correct / newScore.total) * 100);
         dispatch({
           type: 'END_GAME',
           payload: {
@@ -91,158 +68,126 @@ const ColorGame: React.FC = () => {
             completedAt: new Date()
           }
         });
+        if (onGameComplete) {
+          setTimeout(() => onGameComplete(), 2000);
+        }
       } else {
-        setQuestionNumber(prev => prev + 1);
-        generateQuestion();
+        setCurrentQuestion(currentQuestion + 1);
+        setSelectedAnswer(null);
+        setShowFeedback(false);
+        setTimeLeft(25);
       }
-    }, 1000);
+    }, 1500);
   };
 
-  const playAgain = () => {
-    setGameActive(true);
-    setQuestionNumber(1);
-    setScore({ correct: 0, total: 0 });
-    setShowResult(false);
-    generateQuestion();
-  };
-
-  const goHome = () => {
-    setGameActive(false);
-    window.history.back();
-  };
-
-  const handleQuitConfirm = () => {
-    setGameActive(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+  const handleTimeUp = () => {
+    if (selectedAnswer === null) {
+      handleAnswer(-1);
     }
-    setShowQuitDialog(false);
-    goHome();
   };
 
-  if (!currentQuestion) return null;
+  const handleQuit = () => {
+    setShowQuitDialog(false);
+    if (onGameComplete) {
+      onGameComplete();
+    }
+  };
+
+  if (questions.length === 0) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  const question = questions[currentQuestion];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <motion.button
-              onClick={() => setShowQuitDialog(true)}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft className="h-5 w-5 text-white" />
-            </motion.button>
-            <motion.h1 
-              className="text-3xl md:text-4xl font-bold text-white"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              🎨 Color Game
-            </motion.h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-white text-lg font-semibold">
-              Question {questionNumber}/{TOTAL_QUESTIONS}
-            </div>
-            <AppMenu />
-          </div>
+    <div className="h-screen bg-gradient-to-br from-green-400 to-blue-500 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 text-white">
+        <div className="flex items-center gap-2">
+          <Palette className="w-6 h-6" />
+          <span className="font-bold text-lg">Color Game</span>
         </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium">
+            {currentQuestion + 1}/{questions.length}
+          </span>
+          <Timer timeLeft={timeLeft} onTimeUp={handleTimeUp} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowQuitDialog(true)}
+            className="text-white hover:bg-white/20"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
 
-        {/* Instructions */}
-        <motion.div 
-          className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 mb-6 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <p className="text-white text-lg font-medium">
-            👆 Tap the color that matches the TEXT COLOR, not the word!
-          </p>
-        </motion.div>
-
-        {/* Question */}
-        <motion.div 
-          className="bg-white rounded-3xl p-8 mb-8 text-center shadow-xl"
+      {/* Game Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <motion.div
+          key={currentQuestion}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          key={questionNumber}
+          className="bg-white rounded-3xl p-8 max-w-md w-full shadow-xl"
         >
-          <div className="mb-6">
-            <div className="text-lg text-gray-600 mb-4">
-              What color is this text?
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              🎨 What color is this text?
+            </h2>
+            <div className="bg-gray-50 rounded-2xl p-6 mb-6">
+              <p 
+                className="text-4xl font-bold"
+                style={{ color: question.textColor }}
+              >
+                {question.text}
+              </p>
             </div>
-            <motion.div 
-              className="text-6xl md:text-8xl font-bold mb-4"
-              style={{ color: currentQuestion.textColor }}
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              {currentQuestion.text}
-            </motion.div>
           </div>
-        </motion.div>
 
-        {/* Color Options */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {currentQuestion.displayColors.map((color, index) => (
-            <motion.button
-              key={index}
-              className={`h-24 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                selectedAnswer === index
-                  ? index === currentQuestion.correctColorIndex
-                    ? 'ring-4 ring-green-400 ring-offset-2'
-                    : 'ring-4 ring-red-400 ring-offset-2'
-                  : selectedAnswer !== null && index === currentQuestion.correctColorIndex
-                  ? 'ring-4 ring-green-400 ring-offset-2'
-                  : ''
-              }`}
-              style={{ backgroundColor: color.hex }}
-              onClick={() => handleAnswer(index)}
-              disabled={selectedAnswer !== null || !gameActive}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -5 }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg drop-shadow-lg">
+          <div className="grid grid-cols-3 gap-3">
+            {question.displayColors.map((color: any, index: number) => (
+              <Button
+                key={index}
+                onClick={() => handleAnswer(index)}
+                disabled={selectedAnswer !== null}
+                className={`p-4 h-16 rounded-xl border-4 transition-all duration-200 ${
+                  selectedAnswer === index
+                    ? isCorrect
+                      ? 'border-green-500 scale-110'
+                      : 'border-red-500 scale-110'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                style={{ backgroundColor: color.hex }}
+              >
+                <span className="text-white font-semibold text-xs drop-shadow-lg">
                   {color.name}
                 </span>
-              </div>
-            </motion.button>
-          ))}
-        </div>
+              </Button>
+            ))}
+          </div>
 
-        {/* Score */}
-        <div className="text-center text-white text-lg font-semibold">
-          Score: {score.correct}/{score.total}
-        </div>
-
-        {/* Quit Game Dialog */}
-        <QuitGameDialog
-          isOpen={showQuitDialog}
-          onClose={() => setShowQuitDialog(false)}
-          onConfirm={handleQuitConfirm}
-        />
-
-        {/* Result Dialog */}
-        {showResult && (
-          <ResultDialog
-            isOpen={showResult}
-            stats={{
-              correct: score.correct,
-              total: score.total,
-              accuracy: (score.correct / score.total) * 100
-            }}
-            rank={getRank((score.correct / score.total) * 100)}
-            onPlayAgain={playAgain}
-            onHome={goHome}
-          />
-        )}
+          <div className="mt-6 text-center">
+            <div className="flex justify-center gap-4 text-sm text-gray-600">
+              <span>Score: {score.correct}/{score.total}</span>
+              <span>Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
+            </div>
+          </div>
+        </motion.div>
       </div>
+
+      <QuickFeedback show={showFeedback} isCorrect={isCorrect} />
+      <QuitGameDialog 
+        isOpen={showQuitDialog} 
+        onClose={() => setShowQuitDialog(false)}
+        onQuit={handleQuit}
+      />
+      <ResultDialog
+        isOpen={gameEnded}
+        gameType="Color"
+        score={score}
+        onClose={() => onGameComplete && onGameComplete()}
+      />
     </div>
   );
 };

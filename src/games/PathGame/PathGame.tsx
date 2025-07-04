@@ -1,69 +1,142 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { useGame } from '../../context/GameContext';
+import { Button } from '@/components/ui/button';
+import { Route, X, Home } from 'lucide-react';
 import { generatePathQuestion, generateSVGPath, Path } from '../../utils/pathUtils';
-import GameButton from '../../components/GameButton';
-import ResultDialog from '../../components/ResultDialog';
+import { useGame } from '../../context/GameContext';
+import Timer from '../../components/Timer';
 import QuickFeedback from '../../components/QuickFeedback';
 import QuitGameDialog from '../../components/QuitGameDialog';
+import ResultDialog from '../../components/ResultDialog';
 
-const PathGame: React.FC = () => {
-  const { dispatch, getRank, playSound } = useGame();
-  const [currentPaths, setCurrentPaths] = useState<Path[]>([]);
-  const [questionNumber, setQuestionNumber] = useState(1);
+interface PathGameProps {
+  onGameComplete?: () => void;
+  difficulty?: string;
+}
+
+const PathGame: React.FC<PathGameProps> = ({ onGameComplete, difficulty = 'medium' }) => {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [showResult, setShowResult] = useState(false);
+  const [chances, setChances] = useState(10);
   const [selectedPath, setSelectedPath] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [gameEnded, setGameEnded] = useState(false);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
-  const [gameActive, setGameActive] = useState(true);
+  const [questions, setQuestions] = useState<Path[][]>([]);
 
-  const TOTAL_QUESTIONS = 10;
+  const { playSound, dispatch } = useGame();
 
   useEffect(() => {
-    if (gameActive) {
-      generateQuestion();
-    }
-  }, [gameActive]);
+    generateQuestions();
+    dispatch({ type: 'START_GAME', payload: 'path' });
+  }, [dispatch]);
 
-  const generateQuestion = () => {
-    if (!gameActive) return;
-    
-    const paths = generatePathQuestion();
-    setCurrentPaths(paths);
-    setSelectedPath(null);
+  const generateQuestions = () => {
+    const newQuestions = [];
+    for (let i = 0; i < 10; i++) {
+      newQuestions.push(generatePathQuestion());
+    }
+    setQuestions(newQuestions);
   };
 
   const handlePathSelect = (pathId: number) => {
-    if (selectedPath !== null || !gameActive) return;
+    if (selectedPath !== null) return;
     
     setSelectedPath(pathId);
-    const selectedPathData = currentPaths.find(p => p.id === pathId);
+    const paths = questions[currentQuestion];
+    const selectedPathData = paths.find(p => p.id === pathId);
     const correct = selectedPathData?.isCorrect || false;
     
     setIsCorrect(correct);
     setShowFeedback(true);
     
-    const newScore = {
-      correct: score.correct + (correct ? 1 : 0),
-      total: score.total + 1
-    };
-    setScore(newScore);
-    
-    playSound(correct ? 'correct' : 'wrong');
-    
-    setTimeout(() => {
-      if (!gameActive) return;
-      setShowFeedback(false);
-      if (questionNumber >= TOTAL_QUESTIONS) {
-        const accuracy = (newScore.correct / newScore.total) * 100;
-        const rank = getRank(accuracy);
-        setShowResult(true);
-        playSound('complete');
+    if (correct) {
+      const newScore = {
+        correct: score.correct + 1,
+        total: score.total + 1
+      };
+      setScore(newScore);
+      playSound('correct');
+      
+      setTimeout(() => {
+        if (currentQuestion + 1 >= questions.length) {
+          setGameEnded(true);
+          const accuracy = Math.round((newScore.correct / newScore.total) * 100);
+          dispatch({
+            type: 'END_GAME',
+            payload: {
+              gameType: 'path',
+              score: { ...newScore, accuracy },
+              completedAt: new Date()
+            }
+          });
+          if (onGameComplete) {
+            setTimeout(() => onGameComplete(), 2000);
+          }
+        } else {
+          setCurrentQuestion(currentQuestion + 1);
+          setSelectedPath(null);
+          setShowFeedback(false);
+          setTimeLeft(30);
+        }
+      }, 1500);
+    } else {
+      const newChances = chances - 1;
+      setChances(newChances);
+      playSound('wrong');
+      
+      if (newChances <= 0) {
+        const newScore = {
+          correct: score.correct,
+          total: score.total + 1
+        };
+        setScore(newScore);
         
+        setTimeout(() => {
+          if (currentQuestion + 1 >= questions.length) {
+            setGameEnded(true);
+            const accuracy = Math.round((newScore.correct / newScore.total) * 100);
+            dispatch({
+              type: 'END_GAME',
+              payload: {
+                gameType: 'path',
+                score: { ...newScore, accuracy },
+                completedAt: new Date()
+              }
+            });
+            if (onGameComplete) {
+              setTimeout(() => onGameComplete(), 2000);
+            }
+          } else {
+            setCurrentQuestion(currentQuestion + 1);
+            setSelectedPath(null);
+            setShowFeedback(false);
+            setTimeLeft(30);
+            setChances(10);
+          }
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          setSelectedPath(null);
+          setShowFeedback(false);
+        }, 1000);
+      }
+    }
+  };
+
+  const handleTimeUp = () => {
+    if (selectedPath === null) {
+      const newScore = {
+        correct: score.correct,
+        total: score.total + 1
+      };
+      setScore(newScore);
+      
+      if (currentQuestion + 1 >= questions.length) {
+        setGameEnded(true);
+        const accuracy = Math.round((newScore.correct / newScore.total) * 100);
         dispatch({
           type: 'END_GAME',
           payload: {
@@ -72,233 +145,170 @@ const PathGame: React.FC = () => {
             completedAt: new Date()
           }
         });
+        if (onGameComplete) {
+          setTimeout(() => onGameComplete(), 2000);
+        }
       } else {
-        setQuestionNumber(prev => prev + 1);
-        generateQuestion();
+        setCurrentQuestion(currentQuestion + 1);
+        setSelectedPath(null);
+        setShowFeedback(false);
+        setTimeLeft(30);
+        setChances(10);
       }
-    }, 800);
-  };
-
-  const playAgain = () => {
-    setGameActive(true);
-    setQuestionNumber(1);
-    setScore({ correct: 0, total: 0 });
-    setShowResult(false);
-    setShowQuitDialog(false);
-    generateQuestion();
-  };
-
-  const goHome = () => {
-    setGameActive(false);
-    window.history.back();
-  };
-
-  const handleQuitConfirm = () => {
-    setGameActive(false);
-    setShowQuitDialog(false);
-    goHome();
-  };
-
-  const getPathStroke = (path: Path) => {
-    if (selectedPath === null) return path.color;
-    if (selectedPath === path.id) {
-      return path.isCorrect ? '#10B981' : '#EF4444';
     }
-    if (path.isCorrect && selectedPath !== null) {
-      return '#10B981';
-    }
-    return '#9CA3AF';
   };
 
-  const getPathOpacity = (path: Path) => {
-    if (selectedPath === null) return 1;
-    if (selectedPath === path.id || path.isCorrect) return 1;
-    return 0.3;
+  const handleQuit = () => {
+    setShowQuitDialog(false);
+    if (onGameComplete) {
+      onGameComplete();
+    }
   };
+
+  if (questions.length === 0) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  const paths = questions[currentQuestion];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-500 to-pink-600 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <motion.button
-              onClick={() => setShowQuitDialog(true)}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft className="h-5 w-5 text-white" />
-            </motion.button>
-            <motion.h1 
-              className="text-3xl md:text-4xl font-bold text-white"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              🐭 Mouse Path Game
-            </motion.h1>
-          </div>
-          <div className="text-white text-lg font-semibold">
-            Question {questionNumber}/{TOTAL_QUESTIONS}
-          </div>
+    <div className="h-screen bg-gradient-to-br from-orange-400 to-red-500 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 text-white">
+        <div className="flex items-center gap-2">
+          <Route className="w-6 h-6" />
+          <span className="font-bold text-lg">Path Game</span>
         </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium">
+            {currentQuestion + 1}/{questions.length}
+          </span>
+          <span className="text-sm font-medium">
+            Chances: {chances}
+          </span>
+          <Timer timeLeft={timeLeft} onTimeUp={handleTimeUp} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowQuitDialog(true)}
+            className="text-white hover:bg-white/20"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
 
-        {/* Instructions */}
-        <motion.div 
-          className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 mb-6 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <p className="text-white text-lg font-medium">
-            🎯 Help the mouse find the SHORTEST path to get home!
-          </p>
-        </motion.div>
-
-        {/* Game Area */}
-        <motion.div 
-          className="bg-white rounded-3xl p-6 mb-8 shadow-xl"
+      {/* Game Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <motion.div
+          key={currentQuestion}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          key={questionNumber}
+          className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-xl"
         >
-          <div className="relative">
-            <svg 
-              viewBox="0 0 400 300" 
-              className="w-full h-64 md:h-80 border-2 border-gray-200 rounded-xl"
-              style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}
-            >
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              🐭 Find the Shortest Path Home!
+            </h2>
+            <p className="text-gray-600">Click on the shortest colored path</p>
+          </div>
+
+          {/* SVG Game Board */}
+          <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-2xl p-4 mb-4">
+            <svg width="100%" height="300" viewBox="0 0 400 300" className="border-2 border-dashed border-gray-300 rounded-lg">
               {/* Grid pattern background */}
               <defs>
                 <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="0.5"/>
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" strokeWidth="1"/>
                 </pattern>
               </defs>
-              <rect width="400" height="300" fill="url(#grid)" />
+              <rect width="100%" height="100%" fill="url(#grid)" />
               
               {/* Mouse at start */}
-              <text x="50" y="140" textAnchor="middle" className="text-4xl">
-                🐭
-              </text>
-              <text x="50" y="175" textAnchor="middle" className="text-xs font-bold fill-green-600">
-                START
-              </text>
+              <circle cx="50" cy="150" r="15" fill="#8B5CF6" />
+              <text x="50" y="155" textAnchor="middle" className="text-xs font-bold fill-white">🐭</text>
               
               {/* Home at end */}
-              <text x="350" y="140" textAnchor="middle" className="text-4xl">
-                🏠
-              </text>
-              <text x="350" y="175" textAnchor="middle" className="text-xs font-bold fill-red-600">
-                HOME
-              </text>
-
-              {/* Paths with better visibility */}
-              {currentPaths.map((path, index) => (
-                <motion.g key={path.id}>
-                  {/* Path shadow for depth */}
-                  <motion.path
+              <rect x="335" y="135" width="30" height="30" fill="#EF4444" rx="5" />
+              <text x="350" y="155" textAnchor="middle" className="text-lg">🏠</text>
+              
+              {/* Paths */}
+              {paths.map((path) => (
+                <g key={path.id}>
+                  <path
                     d={generateSVGPath(path.points)}
                     fill="none"
-                    stroke="rgba(0,0,0,0.2)"
-                    strokeWidth="8"
+                    stroke={selectedPath === path.id ? (isCorrect ? '#10B981' : '#EF4444') : path.color}
+                    strokeWidth={selectedPath === path.id ? "6" : "4"}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    transform="translate(2,2)"
-                    strokeOpacity={getPathOpacity(path) * 0.5}
-                  />
-                  {/* Main path */}
-                  <motion.path
-                    d={generateSVGPath(path.points)}
-                    fill="none"
-                    stroke={getPathStroke(path)}
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeOpacity={getPathOpacity(path)}
-                    className="cursor-pointer hover:stroke-opacity-80 transition-all"
+                    className="cursor-pointer transition-all duration-200 hover:stroke-6"
                     onClick={() => handlePathSelect(path.id)}
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 1, delay: index * 0.2 }}
-                    strokeDasharray={selectedPath === null ? "none" : undefined}
                   />
-                  {/* Path dots for waypoints */}
-                  {path.points.slice(1, -1).map((point, pointIndex) => (
+                  {/* Path dots for better visibility */}
+                  {path.points.map((point, idx) => (
                     <circle
-                      key={pointIndex}
+                      key={idx}
                       cx={point.x}
                       cy={point.y}
                       r="3"
-                      fill={getPathStroke(path)}
-                      opacity={getPathOpacity(path)}
+                      fill={path.color}
+                      className="cursor-pointer"
+                      onClick={() => handlePathSelect(path.id)}
                     />
                   ))}
-                </motion.g>
+                </g>
               ))}
             </svg>
           </div>
-          
-          {/* Path selection buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-6">
-            {currentPaths.map((path) => (
-              <motion.button
+
+          {/* Color Legend */}
+          <div className="grid grid-cols-5 gap-2 mb-4">
+            {paths.map((path) => (
+              <Button
                 key={path.id}
-                className={`py-3 px-4 rounded-xl font-semibold transition-all ${
-                  selectedPath === path.id
-                    ? path.isCorrect
-                      ? 'bg-green-500 text-white'
-                      : 'bg-red-500 text-white'
-                    : selectedPath !== null && path.isCorrect
-                    ? 'bg-green-500 text-white'
-                    : 'text-white hover:bg-white/20'
-                }`}
-                style={{
-                  backgroundColor: selectedPath === null ? path.color : undefined
-                }}
                 onClick={() => handlePathSelect(path.id)}
-                disabled={selectedPath !== null || !gameActive}
-                whileHover={{ scale: selectedPath === null && gameActive ? 1.05 : 1 }}
-                whileTap={{ scale: selectedPath === null && gameActive ? 0.95 : 1 }}
+                disabled={selectedPath !== null}
+                className={`p-2 h-auto flex flex-col items-center text-center transition-all duration-200 ${
+                  selectedPath === path.id
+                    ? isCorrect
+                      ? 'bg-green-500 hover:bg-green-500'
+                      : 'bg-red-500 hover:bg-red-500'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                }`}
               >
-                {path.name}
-              </motion.button>
+                <div 
+                  className="w-4 h-4 rounded-full mb-1"
+                  style={{ backgroundColor: path.color }}
+                />
+                <span className="text-xs font-medium">{path.name}</span>
+                <span className="text-xs opacity-70">{Math.round(path.length)}px</span>
+              </Button>
             ))}
           </div>
+
+          <div className="text-center">
+            <div className="flex justify-center gap-4 text-sm text-gray-600">
+              <span>Score: {score.correct}/{score.total}</span>
+              <span>Chances: {chances}</span>
+              <span>Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
+            </div>
+          </div>
         </motion.div>
-
-        {/* Score */}
-        <div className="text-center text-white text-lg font-semibold">
-          Score: {score.correct}/{score.total} | Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
-        </div>
-
-        {/* Quick Feedback */}
-        <QuickFeedback 
-          isVisible={showFeedback}
-          isCorrect={isCorrect}
-          duration={100}
-        />
-
-        {/* Result Dialog */}
-        {showResult && (
-          <ResultDialog
-            isOpen={showResult}
-            stats={{
-              correct: score.correct,
-              total: score.total,
-              accuracy: (score.correct / score.total) * 100
-            }}
-            rank={getRank((score.correct / score.total) * 100)}
-            onPlayAgain={playAgain}
-            onHome={goHome}
-          />
-        )}
-
-        {/* Quit Game Dialog */}
-        <QuitGameDialog
-          isOpen={showQuitDialog}
-          onClose={() => setShowQuitDialog(false)}
-          onConfirm={handleQuitConfirm}
-        />
       </div>
+
+      <QuickFeedback show={showFeedback} isCorrect={isCorrect} />
+      <QuitGameDialog 
+        isOpen={showQuitDialog} 
+        onClose={() => setShowQuitDialog(false)}
+        onQuit={handleQuit}
+      />
+      <ResultDialog
+        isOpen={gameEnded}
+        gameType="Path"
+        score={score}
+        onClose={() => onGameComplete && onGameComplete()}
+      />
     </div>
   );
 };
