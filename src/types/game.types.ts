@@ -6,7 +6,7 @@ export interface GameStats {
 }
 
 export interface GameSession {
-  gameType: 'calendar' | 'color' | 'path' | 'attention';
+  gameType: 'calendar' | 'color' | 'path' | 'attention' | 'memory';
   score: GameStats;
   completedAt: Date;
 }

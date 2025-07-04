@@ -21,7 +21,7 @@ const PathGame: React.FC = () => {
   const [showQuitDialog, setShowQuitDialog] = useState(false);
   const [gameActive, setGameActive] = useState(true);
 
-  const TOTAL_QUESTIONS = 6;
+  const TOTAL_QUESTIONS = 10;
 
   useEffect(() => {
     if (gameActive) {
@@ -89,6 +89,7 @@ const PathGame: React.FC = () => {
   };
 
   const goHome = () => {
+    setGameActive(false);
     window.history.back();
   };
 
@@ -101,18 +102,18 @@ const PathGame: React.FC = () => {
   const getPathStroke = (path: Path) => {
     if (selectedPath === null) return path.color;
     if (selectedPath === path.id) {
-      return path.isCorrect ? '#10B981' : '#EF4444'; // Green for correct, red for wrong
+      return path.isCorrect ? '#10B981' : '#EF4444';
     }
     if (path.isCorrect && selectedPath !== null) {
-      return '#10B981'; // Show correct path in green
+      return '#10B981';
     }
-    return '#9CA3AF'; // Muted gray for unselected
+    return '#9CA3AF';
   };
 
   const getPathOpacity = (path: Path) => {
     if (selectedPath === null) return 1;
     if (selectedPath === path.id || path.isCorrect) return 1;
-    return 0.4;
+    return 0.3;
   };
 
   return (
@@ -163,14 +164,23 @@ const PathGame: React.FC = () => {
           <div className="relative">
             <svg 
               viewBox="0 0 400 300" 
-              className="w-full h-64 md:h-80 border-2 border-gray-200 rounded-xl bg-green-50"
+              className="w-full h-64 md:h-80 border-2 border-gray-200 rounded-xl"
+              style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}
             >
+              {/* Grid pattern background */}
+              <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="400" height="300" fill="url(#grid)" />
+              
               {/* Mouse at start */}
               <text x="50" y="140" textAnchor="middle" className="text-4xl">
                 🐭
               </text>
               <text x="50" y="175" textAnchor="middle" className="text-xs font-bold fill-green-600">
-                MOUSE
+                START
               </text>
               
               {/* Home at end */}
@@ -181,9 +191,21 @@ const PathGame: React.FC = () => {
                 HOME
               </text>
 
-              {/* Paths */}
+              {/* Paths with better visibility */}
               {currentPaths.map((path, index) => (
                 <motion.g key={path.id}>
+                  {/* Path shadow for depth */}
+                  <motion.path
+                    d={generateSVGPath(path.points)}
+                    fill="none"
+                    stroke="rgba(0,0,0,0.2)"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    transform="translate(2,2)"
+                    strokeOpacity={getPathOpacity(path) * 0.5}
+                  />
+                  {/* Main path */}
                   <motion.path
                     d={generateSVGPath(path.points)}
                     fill="none"
@@ -197,14 +219,26 @@ const PathGame: React.FC = () => {
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 1, delay: index * 0.2 }}
+                    strokeDasharray={selectedPath === null ? "none" : undefined}
                   />
+                  {/* Path dots for waypoints */}
+                  {path.points.slice(1, -1).map((point, pointIndex) => (
+                    <circle
+                      key={pointIndex}
+                      cx={point.x}
+                      cy={point.y}
+                      r="3"
+                      fill={getPathStroke(path)}
+                      opacity={getPathOpacity(path)}
+                    />
+                  ))}
                 </motion.g>
               ))}
             </svg>
           </div>
           
           {/* Path selection buttons */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-6">
             {currentPaths.map((path) => (
               <motion.button
                 key={path.id}
@@ -225,10 +259,7 @@ const PathGame: React.FC = () => {
                 whileHover={{ scale: selectedPath === null && gameActive ? 1.05 : 1 }}
                 whileTap={{ scale: selectedPath === null && gameActive ? 0.95 : 1 }}
               >
-                {path.color === '#EF4444' ? 'Red Path' :
-                 path.color === '#3B82F6' ? 'Blue Path' :
-                 path.color === '#10B981' ? 'Green Path' :
-                 path.color === '#F59E0B' ? 'Yellow Path' : 'Purple Path'}
+                {path.name}
               </motion.button>
             ))}
           </div>
@@ -236,7 +267,7 @@ const PathGame: React.FC = () => {
 
         {/* Score */}
         <div className="text-center text-white text-lg font-semibold">
-          Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
+          Score: {score.correct}/{score.total} | Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
         </div>
 
         {/* Quick Feedback */}

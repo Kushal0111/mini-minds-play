@@ -10,6 +10,7 @@ export interface Path {
   length: number;
   isCorrect: boolean;
   color: string;
+  name: string;
 }
 
 export const calculateDistance = (p1: Point, p2: Point): number => {
@@ -24,7 +25,7 @@ export const calculatePathLength = (points: Point[]): number => {
   return totalLength;
 };
 
-export const generateRandomPath = (start: Point, end: Point, complexity: number): Point[] => {
+export const generateRandomPath = (start: Point, end: Point, complexity: number, offset: number): Point[] => {
   const points = [start];
   
   for (let i = 0; i < complexity; i++) {
@@ -32,13 +33,13 @@ export const generateRandomPath = (start: Point, end: Point, complexity: number)
     const baseX = start.x + (end.x - start.x) * t;
     const baseY = start.y + (end.y - start.y) * t;
     
-    // Add some randomness
-    const offsetX = (Math.random() - 0.5) * 100;
-    const offsetY = (Math.random() - 0.5) * 100;
+    // Add controlled randomness with offset to avoid overlapping
+    const offsetX = (Math.random() - 0.5) * 80 + offset;
+    const offsetY = (Math.random() - 0.5) * 60 + (offset * 0.5);
     
     points.push({
-      x: Math.max(50, Math.min(350, baseX + offsetX)),
-      y: Math.max(50, Math.min(250, baseY + offsetY))
+      x: Math.max(80, Math.min(320, baseX + offsetX)),
+      y: Math.max(80, Math.min(220, baseY + offsetY))
     });
   }
   
@@ -51,12 +52,18 @@ export const generatePathQuestion = (): Path[] => {
   const end: Point = { x: 350, y: 150 };
   
   const paths: Path[] = [];
-  const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']; // Red, Blue, Green, Yellow, Purple
+  const pathConfigs = [
+    { color: '#EF4444', name: 'Red Path', offset: -40 },
+    { color: '#3B82F6', name: 'Blue Path', offset: -20 },
+    { color: '#10B981', name: 'Green Path', offset: 0 },
+    { color: '#F59E0B', name: 'Yellow Path', offset: 20 },
+    { color: '#8B5CF6', name: 'Purple Path', offset: 40 }
+  ];
   
-  // Generate 4-5 paths
+  // Generate 5 distinct paths
   for (let i = 0; i < 5; i++) {
-    const complexity = Math.floor(Math.random() * 3) + 1;
-    const points = generateRandomPath(start, end, complexity);
+    const complexity = Math.floor(Math.random() * 2) + 2; // 2-3 waypoints
+    const points = generateRandomPath(start, end, complexity, pathConfigs[i].offset);
     const length = calculatePathLength(points);
     
     paths.push({
@@ -64,7 +71,8 @@ export const generatePathQuestion = (): Path[] => {
       points,
       length,
       isCorrect: false,
-      color: colors[i]
+      color: pathConfigs[i].color,
+      name: pathConfigs[i].name
     });
   }
   
