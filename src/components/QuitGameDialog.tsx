@@ -14,13 +14,13 @@ import {
 interface QuitGameDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onQuit: () => void;
 }
 
 const QuitGameDialog: React.FC<QuitGameDialogProps> = ({
   isOpen,
   onClose,
-  onConfirm,
+  onQuit,
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -33,7 +33,7 @@ const QuitGameDialog: React.FC<QuitGameDialogProps> = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Continue Playing</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Quit Game</AlertDialogAction>
+          <AlertDialogAction onClick={onQuit}>Quit Game</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
