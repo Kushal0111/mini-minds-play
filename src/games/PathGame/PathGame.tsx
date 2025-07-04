@@ -84,6 +84,7 @@ const PathGame: React.FC = () => {
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
+    setShowQuitDialog(false);
     generateQuestion();
   };
 
@@ -97,8 +98,8 @@ const PathGame: React.FC = () => {
     goHome();
   };
 
-  const getPathColor = (path: Path) => {
-    if (selectedPath === null) return '#6B7280'; // Default gray
+  const getPathStroke = (path: Path) => {
+    if (selectedPath === null) return path.color;
     if (selectedPath === path.id) {
       return path.isCorrect ? '#10B981' : '#EF4444'; // Green for correct, red for wrong
     }
@@ -106,6 +107,12 @@ const PathGame: React.FC = () => {
       return '#10B981'; // Show correct path in green
     }
     return '#9CA3AF'; // Muted gray for unselected
+  };
+
+  const getPathOpacity = (path: Path) => {
+    if (selectedPath === null) return 1;
+    if (selectedPath === path.id || path.isCorrect) return 1;
+    return 0.4;
   };
 
   return (
@@ -127,7 +134,7 @@ const PathGame: React.FC = () => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              🛤️ Path Game
+              🐭 Mouse Path Game
             </motion.h1>
           </div>
           <div className="text-white text-lg font-semibold">
@@ -142,7 +149,7 @@ const PathGame: React.FC = () => {
           animate={{ opacity: 1 }}
         >
           <p className="text-white text-lg font-medium">
-            🎯 Find the SHORTEST path from start to finish!
+            🎯 Help the mouse find the SHORTEST path to get home!
           </p>
         </motion.div>
 
@@ -156,17 +163,22 @@ const PathGame: React.FC = () => {
           <div className="relative">
             <svg 
               viewBox="0 0 400 300" 
-              className="w-full h-64 md:h-80 border-2 border-gray-200 rounded-xl bg-gray-50"
+              className="w-full h-64 md:h-80 border-2 border-gray-200 rounded-xl bg-green-50"
             >
-              {/* Start and End markers */}
-              <circle cx="50" cy="150" r="15" fill="#10B981" />
-              <text x="50" y="130" textAnchor="middle" className="text-xs font-bold fill-green-600">
-                START
+              {/* Mouse at start */}
+              <text x="50" y="140" textAnchor="middle" className="text-4xl">
+                🐭
+              </text>
+              <text x="50" y="175" textAnchor="middle" className="text-xs font-bold fill-green-600">
+                MOUSE
               </text>
               
-              <circle cx="350" cy="150" r="15" fill="#EF4444" />
-              <text x="350" y="130" textAnchor="middle" className="text-xs font-bold fill-red-600">
-                FINISH
+              {/* Home at end */}
+              <text x="350" y="140" textAnchor="middle" className="text-4xl">
+                🏠
+              </text>
+              <text x="350" y="175" textAnchor="middle" className="text-xs font-bold fill-red-600">
+                HOME
               </text>
 
               {/* Paths */}
@@ -175,46 +187,24 @@ const PathGame: React.FC = () => {
                   <motion.path
                     d={generateSVGPath(path.points)}
                     fill="none"
-                    stroke={getPathColor(path)}
-                    strokeWidth="4"
+                    stroke={getPathStroke(path)}
+                    strokeWidth="6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="cursor-pointer hover:stroke-blue-500 transition-colors"
+                    strokeOpacity={getPathOpacity(path)}
+                    className="cursor-pointer hover:stroke-opacity-80 transition-all"
                     onClick={() => handlePathSelect(path.id)}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 1, delay: index * 0.2 }}
                   />
-                  
-                  {/* Path number label */}
-                  <circle
-                    cx={path.points[Math.floor(path.points.length / 2)]?.x || 0}
-                    cy={path.points[Math.floor(path.points.length / 2)]?.y || 0}
-                    r="12"
-                    fill="white"
-                    stroke={getPathColor(path)}
-                    strokeWidth="2"
-                    className="cursor-pointer"
-                    onClick={() => handlePathSelect(path.id)}
-                  />
-                  <text
-                    x={path.points[Math.floor(path.points.length / 2)]?.x || 0}
-                    y={path.points[Math.floor(path.points.length / 2)]?.y || 0}
-                    textAnchor="middle"
-                    dy="4"
-                    className="text-sm font-bold cursor-pointer"
-                    fill={getPathColor(path)}
-                    onClick={() => handlePathSelect(path.id)}
-                  >
-                    {path.id + 1}
-                  </text>
                 </motion.g>
               ))}
             </svg>
           </div>
           
-          {/* Path selection buttons for mobile */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+          {/* Path selection buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
             {currentPaths.map((path) => (
               <motion.button
                 key={path.id}
@@ -225,14 +215,20 @@ const PathGame: React.FC = () => {
                       : 'bg-red-500 text-white'
                     : selectedPath !== null && path.isCorrect
                     ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'text-white hover:bg-white/20'
                 }`}
+                style={{
+                  backgroundColor: selectedPath === null ? path.color : undefined
+                }}
                 onClick={() => handlePathSelect(path.id)}
                 disabled={selectedPath !== null || !gameActive}
                 whileHover={{ scale: selectedPath === null && gameActive ? 1.05 : 1 }}
                 whileTap={{ scale: selectedPath === null && gameActive ? 0.95 : 1 }}
               >
-                Path {path.id + 1}
+                {path.color === '#EF4444' ? 'Red Path' :
+                 path.color === '#3B82F6' ? 'Blue Path' :
+                 path.color === '#10B981' ? 'Green Path' :
+                 path.color === '#F59E0B' ? 'Yellow Path' : 'Purple Path'}
               </motion.button>
             ))}
           </div>

@@ -9,6 +9,7 @@ export interface Path {
   points: Point[];
   length: number;
   isCorrect: boolean;
+  color: string;
 }
 
 export const calculateDistance = (p1: Point, p2: Point): number => {
@@ -50,9 +51,10 @@ export const generatePathQuestion = (): Path[] => {
   const end: Point = { x: 350, y: 150 };
   
   const paths: Path[] = [];
+  const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']; // Red, Blue, Green, Yellow, Purple
   
-  // Generate 3-4 paths
-  for (let i = 0; i < 4; i++) {
+  // Generate 4-5 paths
+  for (let i = 0; i < 5; i++) {
     const complexity = Math.floor(Math.random() * 3) + 1;
     const points = generateRandomPath(start, end, complexity);
     const length = calculatePathLength(points);
@@ -61,7 +63,8 @@ export const generatePathQuestion = (): Path[] => {
       id: i,
       points,
       length,
-      isCorrect: false
+      isCorrect: false,
+      color: colors[i]
     });
   }
   

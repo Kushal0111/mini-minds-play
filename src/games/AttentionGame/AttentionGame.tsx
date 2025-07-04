@@ -9,9 +9,9 @@ import QuickFeedback from '../../components/QuickFeedback';
 import QuitGameDialog from '../../components/QuitGameDialog';
 
 interface AttentionQuestion {
-  originalSurface: number;
-  flips: Array<{ from: number; to: number }>;
-  currentSurface: number;
+  originalPosition: number;
+  finalPosition: number;
+  shape: string;
 }
 
 const AttentionGame: React.FC = () => {
@@ -20,18 +20,17 @@ const AttentionGame: React.FC = () => {
   const [questionNumber, setQuestionNumber] = useState(1);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [showResult, setShowResult] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false);
-  const [currentFlipIndex, setCurrentFlipIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [gamePhase, setGamePhase] = useState<'ready' | 'flipping' | 'answer'>('ready');
   const [showQuitDialog, setShowQuitDialog] = useState(false);
   const [gameActive, setGameActive] = useState(true);
+  const [currentShapePosition, setCurrentShapePosition] = useState(0);
 
   const TOTAL_QUESTIONS = 5;
-  const SURFACES = 6; // Number of surfaces to choose from
-  const shapes = ['🔺', '🟦', '⭐', '🔴', '💚', '🟣'];
+  const GRID_SIZE = 9; // 3x3 grid
+  const shapes = ['🔺', '🟦', '⭐', '🔴', '💚', '🟣', '🟡', '🟤', '⚫'];
 
   useEffect(() => {
     if (gameActive) {
@@ -42,58 +41,51 @@ const AttentionGame: React.FC = () => {
   const generateQuestion = () => {
     if (!gameActive) return;
     
-    const originalSurface = Math.floor(Math.random() * SURFACES);
-    const numFlips = Math.floor(Math.random() * 3) + 4; // 4-6 flips
-    const flips: Array<{ from: number; to: number }> = [];
+    const originalPosition = Math.floor(Math.random() * GRID_SIZE);
+    let finalPosition = Math.floor(Math.random() * GRID_SIZE);
     
-    let currentSurface = originalSurface;
-    
-    for (let i = 0; i < numFlips; i++) {
-      const nextSurface = Math.floor(Math.random() * SURFACES);
-      flips.push({ from: currentSurface, to: nextSurface });
-      currentSurface = nextSurface;
+    // Ensure final position is different from original
+    while (finalPosition === originalPosition) {
+      finalPosition = Math.floor(Math.random() * GRID_SIZE);
     }
+    
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
     setCurrentQuestion({
-      originalSurface,
-      flips,
-      currentSurface
+      originalPosition,
+      finalPosition,
+      shape
     });
     
     setSelectedAnswer(null);
-    setCurrentFlipIndex(0);
     setGamePhase('ready');
+    setCurrentShapePosition(originalPosition);
   };
 
   const startFlipping = () => {
     if (!currentQuestion || !gameActive) return;
     
     setGamePhase('flipping');
-    setIsFlipping(true);
-    setCurrentFlipIndex(0);
     
-    // Execute flips with delays
-    const executeFlips = async () => {
-      for (let i = 0; i < currentQuestion.flips.length; i++) {
-        if (!gameActive) return;
-        setCurrentFlipIndex(i);
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
-      
+    // Animate the shape flipping to new position
+    setTimeout(() => {
       if (gameActive) {
-        setIsFlipping(false);
+        setCurrentShapePosition(currentQuestion.finalPosition);
+      }
+    }, 500);
+    
+    setTimeout(() => {
+      if (gameActive) {
         setGamePhase('answer');
       }
-    };
-    
-    executeFlips();
+    }, 2000);
   };
 
-  const handleAnswer = (surface: number) => {
+  const handleAnswer = (position: number) => {
     if (selectedAnswer !== null || !currentQuestion || !gameActive) return;
     
-    setSelectedAnswer(surface);
-    const correct = surface === currentQuestion.originalSurface;
+    setSelectedAnswer(position);
+    const correct = position === currentQuestion.originalPosition;
     
     setIsCorrect(correct);
     setShowFeedback(true);
@@ -135,6 +127,7 @@ const AttentionGame: React.FC = () => {
     setQuestionNumber(1);
     setScore({ correct: 0, total: 0 });
     setShowResult(false);
+    setShowQuitDialog(false);
     generateQuestion();
   };
 
@@ -146,30 +139,6 @@ const AttentionGame: React.FC = () => {
     setGameActive(false);
     setShowQuitDialog(false);
     goHome();
-  };
-
-  const getCurrentShape = () => {
-    if (!currentQuestion) return shapes[0];
-    
-    if (gamePhase === 'ready') {
-      return shapes[currentQuestion.originalSurface];
-    } else if (gamePhase === 'flipping' && currentFlipIndex < currentQuestion.flips.length) {
-      return shapes[currentQuestion.flips[currentFlipIndex].to];
-    } else {
-      return shapes[currentQuestion.currentSurface];
-    }
-  };
-
-  const getCurrentSurface = () => {
-    if (!currentQuestion) return 0;
-    
-    if (gamePhase === 'ready') {
-      return currentQuestion.originalSurface;
-    } else if (gamePhase === 'flipping' && currentFlipIndex < currentQuestion.flips.length) {
-      return currentQuestion.flips[currentFlipIndex].to;
-    } else {
-      return currentQuestion.currentSurface;
-    }
   };
 
   if (!currentQuestion) return null;
@@ -193,7 +162,7 @@ const AttentionGame: React.FC = () => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              🧠 Attention Game
+              🧠 Shape Flip Game
             </motion.h1>
           </div>
           <div className="text-white text-lg font-semibold">
@@ -208,9 +177,9 @@ const AttentionGame: React.FC = () => {
           animate={{ opacity: 1 }}
         >
           <p className="text-white text-lg font-medium">
-            {gamePhase === 'ready' && '👀 Watch the shape move, then find its original position!'}
-            {gamePhase === 'flipping' && '👁️ Keep watching...'}
-            {gamePhase === 'answer' && '🤔 Where did the shape start?'}
+            {gamePhase === 'ready' && '👀 Remember the shape\'s starting position!'}
+            {gamePhase === 'flipping' && '👁️ Watch it flip to a new position...'}
+            {gamePhase === 'answer' && '🤔 Where did the shape START from?'}
           </p>
         </motion.div>
 
@@ -224,46 +193,73 @@ const AttentionGame: React.FC = () => {
           {gamePhase === 'ready' && (
             <div className="text-center">
               <div className="mb-8">
-                <motion.div 
-                  className="text-8xl mb-4"
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    rotate: [0, 5, -5, 0] 
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  {getCurrentShape()}
-                </motion.div>
+                <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto mb-6">
+                  {Array.from({ length: GRID_SIZE }, (_, index) => (
+                    <div
+                      key={index}
+                      className={`h-20 w-20 rounded-xl flex items-center justify-center text-4xl ${
+                        index === currentQuestion.originalPosition
+                          ? 'bg-blue-100 border-2 border-blue-400'
+                          : 'bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      {index === currentQuestion.originalPosition && (
+                        <motion.div
+                          animate={{ 
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 5, -5, 0] 
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          {currentQuestion.shape}
+                        </motion.div>
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <p className="text-lg text-gray-600 mb-6">
-                  Remember this shape and its position!
+                  Remember where this shape is positioned!
                 </p>
               </div>
               
               <GameButton onClick={startFlipping} variant="primary" disabled={!gameActive}>
-                Start Flipping! 🚀
+                Start Flipping! 🔄
               </GameButton>
             </div>
           )}
 
           {gamePhase === 'flipping' && (
             <div className="text-center">
-              <div className="mb-4 text-lg text-gray-600">
-                Flip {currentFlipIndex + 1} of {currentQuestion.flips.length}
+              <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto mb-6">
+                {Array.from({ length: GRID_SIZE }, (_, index) => (
+                  <div
+                    key={index}
+                    className={`h-20 w-20 rounded-xl flex items-center justify-center text-4xl ${
+                      index === currentShapePosition
+                        ? 'bg-blue-100 border-2 border-blue-400'
+                        : 'bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <AnimatePresence mode="wait">
+                      {index === currentShapePosition && (
+                        <motion.div
+                          key={`${index}-${currentShapePosition}`}
+                          initial={{ rotateY: 0, scale: 1 }}
+                          animate={{ 
+                            rotateY: [0, 180, 360],
+                            scale: [1, 1.3, 1]
+                          }}
+                          transition={{ duration: 1.5 }}
+                        >
+                          {currentQuestion.shape}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
               </div>
-              <motion.div 
-                className="text-8xl mb-4"
-                key={currentFlipIndex}
-                initial={{ rotateY: 0, scale: 1 }}
-                animate={{ 
-                  rotateY: [0, 180, 360],
-                  scale: [1, 1.2, 1]
-                }}
-                transition={{ duration: 0.8 }}
-              >
-                {getCurrentShape()}
-              </motion.div>
-              <div className="text-sm text-gray-500">
-                Watch carefully...
+              <div className="text-lg text-gray-600">
+                Watch the shape flip to its new position...
               </div>
             </div>
           )}
@@ -272,32 +268,36 @@ const AttentionGame: React.FC = () => {
             <div className="text-center">
               <div className="mb-8">
                 <p className="text-xl text-gray-800 mb-6 font-semibold">
-                  Which surface did the shape START from?
+                  Click where the shape STARTED from:
                 </p>
                 
-                {/* Surface Grid */}
-                <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-                  {Array.from({ length: SURFACES }, (_, index) => (
+                {/* Grid */}
+                <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
+                  {Array.from({ length: GRID_SIZE }, (_, index) => (
                     <motion.button
                       key={index}
-                      className={`h-20 w-20 mx-auto rounded-xl text-4xl transition-all duration-200 ${
+                      className={`h-20 w-20 rounded-xl transition-all duration-200 border-2 ${
                         selectedAnswer === index
-                          ? index === currentQuestion.originalSurface
-                            ? 'bg-green-500 text-white ring-4 ring-green-300'
-                            : 'bg-red-500 text-white ring-4 ring-red-300'
-                          : selectedAnswer !== null && index === currentQuestion.originalSurface
-                          ? 'bg-green-500 text-white ring-4 ring-green-300'
-                          : 'bg-gray-100 hover:bg-gray-200 transform hover:scale-105'
+                          ? index === currentQuestion.originalPosition
+                            ? 'bg-green-500 border-green-600 text-white'
+                            : 'bg-red-500 border-red-600 text-white'
+                          : selectedAnswer !== null && index === currentQuestion.originalPosition
+                          ? 'bg-green-500 border-green-600 text-white'
+                          : index === currentQuestion.finalPosition
+                          ? 'bg-blue-100 border-blue-400'
+                          : 'bg-gray-100 border-gray-300 hover:bg-gray-200 transform hover:scale-105'
                       }`}
                       onClick={() => handleAnswer(index)}
                       disabled={selectedAnswer !== null || !gameActive}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ delay: index * 0.05 }}
                       whileHover={{ scale: selectedAnswer === null && gameActive ? 1.1 : 1 }}
                       whileTap={{ scale: selectedAnswer === null && gameActive ? 0.9 : 1 }}
                     >
-                      {shapes[index]}
+                      {index === currentQuestion.finalPosition && (
+                        <span className="text-2xl">{currentQuestion.shape}</span>
+                      )}
                     </motion.button>
                   ))}
                 </div>
