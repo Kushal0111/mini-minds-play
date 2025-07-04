@@ -2,6 +2,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ResultDialogProps {
   isOpen: boolean;
@@ -16,6 +18,8 @@ const ResultDialog: React.FC<ResultDialogProps> = ({
   score,
   onClose
 }) => {
+  const navigate = useNavigate();
+
   const getRankEmoji = (accuracy: number): string => {
     if (accuracy >= 90) return '👑';
     if (accuracy >= 80) return '🏆';
@@ -32,6 +36,10 @@ const ResultDialog: React.FC<ResultDialogProps> = ({
     if (accuracy >= 60) return 'from-blue-400 to-blue-500';
     if (accuracy >= 50) return 'from-yellow-400 to-yellow-500';
     return 'from-gray-400 to-gray-500';
+  };
+
+  const handleGoHome = () => {
+    navigate('/');
   };
 
   const accuracy = score.accuracy || Math.round((score.correct / score.total) * 100);
@@ -79,9 +87,22 @@ const ResultDialog: React.FC<ResultDialogProps> = ({
               </div>
             </div>
             
-            <Button onClick={onClose} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-2xl">
-              Continue
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleGoHome} 
+                variant="outline"
+                className="flex-1 py-3 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <Home className="w-4 h-4" />
+                Home
+              </Button>
+              <Button 
+                onClick={onClose} 
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-2xl"
+              >
+                Continue
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       )}
