@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Moon, Sun, Globe, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -15,16 +16,13 @@ interface SettingsDialogProps {
 
 const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState('English');
   const [feedback, setFeedback] = useState('');
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     // Load settings from localStorage
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    const savedLanguage = localStorage.getItem('language') || 'English';
-    
     setDarkMode(savedDarkMode);
-    setLanguage(savedLanguage);
 
     // Apply dark mode to document
     if (savedDarkMode) {
@@ -47,7 +45,6 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
-    localStorage.setItem('language', newLanguage);
     toast.success(`Language changed to ${newLanguage}`);
   };
 
@@ -63,6 +60,12 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
     setFeedback('');
   };
 
+  const languageOptions = [
+    { value: 'en', label: '🇺🇸 English' },
+    { value: 'es', label: '🇪🇸 Español' },
+    { value: 'fr', label: '🇫🇷 Français' }
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-auto">
@@ -77,7 +80,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {darkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              <span className="font-medium">Dark Mode</span>
+              <span className="font-medium">{t('settings.darkMode')}</span>
             </div>
             <Switch
               checked={darkMode}
@@ -89,19 +92,18 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              <span className="font-medium">Language</span>
+              <span className="font-medium">{t('settings.language')}</span>
             </div>
             <Select value={language} onValueChange={handleLanguageChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="English">🇺🇸 English</SelectItem>
-                <SelectItem value="Spanish">🇪🇸 Español</SelectItem>
-                <SelectItem value="French">🇫🇷 Français</SelectItem>
-                <SelectItem value="German">🇩🇪 Deutsch</SelectItem>
-                <SelectItem value="Hindi">🇮🇳 हिंदी</SelectItem>
-                <SelectItem value="Chinese">🇨🇳 中文</SelectItem>
+                {languageOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -110,7 +112,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
-              <span className="font-medium">Send Feedback to MiniMind</span>
+              <span className="font-medium">{t('settings.feedback')}</span>
             </div>
             <Textarea
               placeholder="Tell us what you think about the games! Your feedback helps us improve... 😊"
@@ -122,7 +124,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
               onClick={handleFeedbackSubmit}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
             >
-              Send Feedback 📤
+              {t('settings.feedback')} 📤
             </Button>
           </div>
 

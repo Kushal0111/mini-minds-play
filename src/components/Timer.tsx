@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 interface TimerProps {
   timeLeft: number;
   onTimeUp: () => void;
+  maxTime?: number;
 }
 
-const Timer: React.FC<TimerProps> = ({ timeLeft, onTimeUp }) => {
+const Timer: React.FC<TimerProps> = ({ timeLeft, onTimeUp, maxTime = 30 }) => {
   useEffect(() => {
     if (timeLeft <= 0) {
       onTimeUp();
@@ -16,7 +17,7 @@ const Timer: React.FC<TimerProps> = ({ timeLeft, onTimeUp }) => {
 
   const radius = 30;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (timeLeft / 30) * circumference;
+  const strokeDashoffset = circumference - (timeLeft / maxTime) * circumference;
 
   return (
     <div className="relative w-20 h-20 flex items-center justify-center">

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "./context/GameContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import GameSession from "./pages/GameSession";
@@ -20,24 +21,26 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <GameProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/session" element={<GameSession />} />
-            <Route path="/calendar" element={<CalendarGame />} />
-            <Route path="/color" element={<ColorGame />} />
-            <Route path="/path" element={<PathGame />} />
-            <Route path="/attention" element={<AttentionGame />} />
-            <Route path="/memory" element={<MemoryGame />} />
-            <Route path="/headcount" element={<HeadCountGame />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </GameProvider>
+      <LanguageProvider>
+        <GameProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/session" element={<GameSession />} />
+              <Route path="/calendar" element={<CalendarGame />} />
+              <Route path="/color" element={<ColorGame />} />
+              <Route path="/path" element={<PathGame />} />
+              <Route path="/attention" element={<AttentionGame />} />
+              <Route path="/memory" element={<MemoryGame />} />
+              <Route path="/headcount" element={<HeadCountGame />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </GameProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

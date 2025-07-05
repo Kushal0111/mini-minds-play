@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, X } from 'lucide-react';
 import { formatDate, getDayOfWeek, addDays, generateRandomDate, generateWrongOptions } from '../../utils/dateUtils';
 import { useGame } from '../../context/GameContext';
+import { useLanguage } from '../../context/LanguageContext';
 import Timer from '../../components/Timer';
 import QuickFeedback from '../../components/QuickFeedback';
 import QuitGameDialog from '../../components/QuitGameDialog';
@@ -20,12 +21,13 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(5);
   const [gameEnded, setGameEnded] = useState(false);
   const [showQuitDialog, setShowQuitDialog] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
 
   const { playSound, dispatch } = useGame();
+  const { t } = useLanguage();
 
   useEffect(() => {
     generateQuestions();
@@ -92,7 +94,7 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
         setCurrentQuestion(currentQuestion + 1);
         setSelectedAnswer(null);
         setShowFeedback(false);
-        setTimeLeft(30);
+        setTimeLeft(5);
       }
     }, 1500);
   };
@@ -122,13 +124,13 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
       <div className="flex justify-between items-center p-4 text-white">
         <div className="flex items-center gap-2">
           <Calendar className="w-6 h-6" />
-          <span className="font-bold text-lg">Calendar Game</span>
+          <span className="font-bold text-lg">{t('calendar.title')}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
             {currentQuestion + 1}/{questions.length}
           </span>
-          <Timer timeLeft={timeLeft} onTimeUp={handleTimeUp} />
+          <Timer timeLeft={timeLeft} onTimeUp={handleTimeUp} maxTime={5} />
           <Button
             variant="ghost"
             size="icon"
@@ -150,7 +152,7 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
         >
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              📅 What day comes after?
+              📅 {t('calendar.instruction')}
             </h2>
             <div className="bg-blue-50 rounded-2xl p-4 mb-4">
               <p className="text-lg font-semibold text-blue-800">
@@ -160,7 +162,7 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
                 ({question.startDay})
               </p>
               <p className="text-lg font-bold text-blue-900 mt-2">
-                + {question.daysToAdd} days
+                {t('calendar.days', { count: question.daysToAdd })}
               </p>
             </div>
           </div>
@@ -187,8 +189,8 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
 
           <div className="mt-6 text-center">
             <div className="flex justify-center gap-4 text-sm text-gray-600">
-              <span>Score: {score.correct}/{score.total}</span>
-              <span>Accuracy: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
+              <span>{t('game.score')}: {score.correct}/{score.total}</span>
+              <span>{t('game.accuracy')}: {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
             </div>
           </div>
         </motion.div>
@@ -202,7 +204,7 @@ const CalendarGame: React.FC<CalendarGameProps> = ({ onGameComplete, difficulty 
       />
       <ResultDialog
         isOpen={gameEnded}
-        gameType="Calendar"
+        gameType={t('calendar.title')}
         score={score}
         onClose={() => onGameComplete && onGameComplete()}
       />
